@@ -1,5 +1,6 @@
 import { parseServerInfo, parseUrlParams, createTlsConfig, createTransportConfig, decodeBase64, base64ToBinary, DeepCopy, parseBool, parseMaybeNumber, parseArray } from './utils.js';
 import yaml from 'js-yaml';
+import { parse as parseWithNewParser } from './parsers/index.js';
 
 // Shared: convert a Clash YAML proxy entry to internal proxy object
 export function convertYamlProxyToObject(p) {
@@ -267,182 +268,27 @@ export function convertYamlProxyToObject(p) {
 
 export class ProxyParser {
 	static parse(url, userAgent) {
+		const newResult = parseWithNewParser(url);
+		if (newResult) {
+			return newResult;
+		}
+		
 		url = url.trim();
 		const type = url.split('://')[0];
 		switch(type) {
-			case 'ss': return new ShadowsocksParser().parse(url);
-			case 'vmess': return new VmessParser().parse(url);
+			// ss is now handled by the new parser system
+			// vmess is now handled by the new parser system
 			case 'vless': return new VlessParser().parse(url);
-      case 'hysteria':
-      case 'hysteria2': 
-      case 'hy2':
-        return new Hysteria2Parser().parse(url);
-      case 'http':
-      case 'https':
-        return HttpParser.parse(url, userAgent);
-      case 'trojan': return new TrojanParser().parse(url);
-      case 'tuic': return new TuicParser().parse(url);
-		}
-	}
-	}
-	class ShadowsocksParser {
-		parse(url) {
-			let parts = url.replace('ss://', '').split('#');
-			let mainPart = parts[0];
-			let tag = parts[1];
-			if (tag && tag.includes('%')) {
-				tag = decodeURIComponent(tag);
-			}
-
-			// Try new format first
-			try {
-				let [base64, serverPart] = mainPart.split('@');
-				// If no @ symbol found, try legacy format
-				if (!serverPart) {
-					// Decode the entire mainPart for legacy format
-					let decodedLegacy = base64ToBinary(mainPart);
-					// Legacy format: method:password@server:port
-					let [methodAndPass, serverInfo] = decodedLegacy.split('@');
-					let [method, password] = methodAndPass.split(':');
-					let [server, server_port] = this.parseServer(serverInfo);
-					
-					return this.createConfig(tag, server, server_port, method, password);
-				}
-
-				// Continue with new format parsing
-				let decodedParts = base64ToBinary(decodeURIComponent(base64)).split(':');
-				let method = decodedParts[0];
-				let password = decodedParts.slice(1).join(':');
-				let [server, server_port] = this.parseServer(serverPart);
-
-				return this.createConfig(tag, server, server_port, method, password);
-			} catch (e) {
-				console.error('Failed to parse shadowsocks URL:', e);
-				return null;
-			}
-		}
-
-		// Helper method to parse server info
-		parseServer(serverPart) {
-			// Match IPv6 address
-			let match = serverPart.match(/\[([^\]]+)\]:(\d+)/);
-			if (match) {
-				return [match[1], match[2]];
-			}
-			return serverPart.split(':');
-		}
-
-		// Helper method to create config object
-		createConfig(tag, server, server_port, method, password) {
-			return {
-				"tag": tag || "Shadowsocks",
-				"type": 'shadowsocks',
-				"server": server,
-				"server_port": parseInt(server_port),
-				"method": method,
-				"password": password,
-				"network": 'tcp',
-				"tcp_fast_open": false
-			};
-		}
-	}
-
-	class VmessParser {
-		parse(url) {
-            // Support fragment name after base64: vmess://BASE64#Name
-            let base64WithFragment = url.replace('vmess://', '')
-            let tagOverride;
-            const hashPos = base64WithFragment.indexOf('#');
-            if (hashPos >= 0) {
-                tagOverride = decodeURIComponent(base64WithFragment.slice(hashPos + 1));
-                base64WithFragment = base64WithFragment.slice(0, hashPos);
-            }
-            let vmessConfig = JSON.parse(decodeBase64(base64WithFragment))
-            let tls = { "enabled": false }
-            let transport;
-            const networkType = vmessConfig.net || 'tcp';
-            const transportType = vmessConfig.type || networkType;
-
-            const tlsEnabled = vmessConfig.tls && vmessConfig.tls !== '' && vmessConfig.tls !== 'none';
-            if (tlsEnabled) {
-                tls = {
-                    "enabled": true,
-                    "server_name": vmessConfig.sni,
-                    "insecure": vmessConfig['skip-cert-verify'] || false
-                }
-            }
-
-            if (networkType === 'ws') {
-                transport = {
-                    "type": "ws",
-                    "path": vmessConfig.path,
-                    "headers": { 'Host': vmessConfig.host ? vmessConfig.host : vmessConfig.sni }
-                }
-            } else if ((networkType === 'tcp' && transportType === 'http') || networkType === 'http') {
-                const method = vmessConfig.method || 'GET';
-                const path = vmessConfig.path || '/';
-                const normalizeToArray = (value) => {
-                    if (!value) {
-                        return undefined;
-                    }
-                    return Array.isArray(value) ? value : [value];
-                };
-                const headers = (() => {
-                    const hostHeader = normalizeToArray(vmessConfig.host || vmessConfig.sni);
-                    if (vmessConfig.headers && typeof vmessConfig.headers === 'object') {
-                        const normalized = {};
-                        Object.entries(vmessConfig.headers).forEach(([key, value]) => {
-                            const normalizedValue = normalizeToArray(value)?.map(entry => `${entry}`);
-                            if (normalizedValue && normalizedValue.length > 0) {
-                                normalized[key] = normalizedValue;
-                            }
-                        });
-                        if (hostHeader && !normalized.Host) {
-                            normalized.Host = hostHeader;
-                        }
-                        if (Object.keys(normalized).length > 0) {
-                            return normalized;
-                        }
-                    }
-
-                    return hostHeader ? { 'Host': hostHeader } : undefined;
-                })();
-
-                transport = {
-                    "type": "http",
-                    "method": method,
-                    "path": Array.isArray(path) ? path : [path],
-                    "headers": headers
-                }
-            } else if (networkType === 'grpc') {
-                transport = {
-                    "type": "grpc",
-                    "service_name": vmessConfig?.path || vmessConfig?.serviceName
-                }
-            } else if (networkType === 'h2') {
-                const hostValue = vmessConfig.host || vmessConfig.sni;
-                transport = {
-                    "type": "h2",
-                    "path": vmessConfig.path,
-                    "host": hostValue ? (Array.isArray(hostValue) ? hostValue : [hostValue]) : undefined
-                }
-            }
-            return {
-                "tag": tagOverride || vmessConfig.ps,
-                "type": "vmess",
-                "server": vmessConfig.add,
-                "server_port": parseInt(vmessConfig.port),
-                "uuid": vmessConfig.id,
-                "alter_id": parseInt(vmessConfig.aid),
-                "security": vmessConfig.scy || "auto",
-                "network": transport?.type || networkType || "tcp",
-                "tcp_fast_open": false,
-                "transport": transport,
-                "tls": tls.enabled ? tls : undefined
-            }
-
-		}
-	}
+	     case 'hysteria':
+	     case 'hysteria2':
+	     case 'hy2':
+	       return new Hysteria2Parser().parse(url);
+	     case 'http':
+	     case 'https':
+	       return HttpParser.parse(url, userAgent);
+	     case 'tuic': return new TuicParser().parse(url);
+	 }
+}
 
     class VlessParser {
         parse(url) {
@@ -522,30 +368,6 @@ export class ProxyParser {
             hop_interval: hopInterval,
             alpn: parseArray(params.alpn),
             fast_open: parseBool(params['fast-open'])
-          };
-        }
-      }
-
-      class TrojanParser {
-        parse(url) {
-          const { addressPart, params, name } = parseUrlParams(url);
-          const [password, serverInfo] = addressPart.split('@');
-          const { host, port } = parseServerInfo(serverInfo);
-
-          const parsedURL = parseServerInfo(addressPart);
-          const tls = createTlsConfig(params);
-          const transport = params.type !== 'tcp' ? createTransportConfig(params) : undefined;
-          return {
-            type: 'trojan',
-            tag: name,
-            server: host,
-            server_port: port,
-            password: decodeURIComponent(password) || parsedURL.username,
-            network: "tcp",
-            tcp_fast_open: false,
-            tls: tls,
-            transport: transport,
-            flow: params.flow ?? undefined
           };
         }
       }
