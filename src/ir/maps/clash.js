@@ -25,6 +25,15 @@ export function mapIRToClash(ir, original) {
     if (typeof p.min_idle_session !== 'undefined') out['min-idle-session'] = p.min_idle_session;
     return out;
   }
+  if (ir.kind === 'shadowsocks') {
+    const out = {
+      ...base,
+      type: 'ss',
+      cipher: original?.method,
+      password: original?.password,
+    };
+    return out;
+  }
 
   if (ir.kind === 'tuic') {
     const p = ir.proto?.tuic || {};

@@ -160,3 +160,33 @@ golden:
           server: hy.example.com
           server_port: 8443
           password: mypassword
+
+  - name: Clash SS IR 映射
+    target: clash
+    description: ss:// URL 通过 IR 映射生成 Clash 代理项
+    input: |
+      ss://YWVzLTEyOC1nY206cGFzcw@example.com:443#SS-URL
+    expects:
+      proxyByName:
+        name: SS-URL
+        fields:
+          type: ss
+          server: example.com
+          port: 443
+          cipher: aes-128-gcm
+          password: pass
+
+  - name: Singbox SS IR 映射
+    target: singbox
+    description: ss:// URL 通过 IR 映射生成 Sing-Box outbound
+    input: |
+      ss://YWVzLTEyOC1nY206cGFzcw@example.com:443#SS-URL
+    expects:
+      outboundByTag:
+        tag: SS-URL
+        fields:
+          type: shadowsocks
+          server: example.com
+          server_port: 443
+          method: aes-128-gcm
+          password: pass

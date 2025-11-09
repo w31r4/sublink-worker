@@ -26,6 +26,15 @@ export function mapIRToSingbox(ir, original) {
     if (typeof p.min_idle_session !== 'undefined') out.min_idle_session = Number(p.min_idle_session);
     return out;
   }
+  if (ir.kind === 'shadowsocks') {
+    const out = {
+      ...base,
+      type: 'shadowsocks',
+      method: original?.method,
+      password: original?.password,
+    };
+    return out;
+  }
 
   if (ir.kind === 'vless') {
     const out = {

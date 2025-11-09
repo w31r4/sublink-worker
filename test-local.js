@@ -335,7 +335,7 @@ vmess://ewogICJ2IjogIjIiLAogICJwcyI6ICJ0dzEubm9kZS5jb20iLAogICJhZGQiOiAidHcxLm5v
             passed = false;
             messages.push(`未找到 "${nodeSelectLabel}" 分组`);
         } else {
-            const expectedProxies = [autoName, manualName, '🇭🇰 Hong Kong', '🇹🇼 Taiwan', '🇺🇸 United States'];
+            const expectedProxies = ['DIRECT','REJECT', autoName, manualName, '🇭🇰 Hong Kong', '🇹🇼 Taiwan', '🇺🇸 United States'];
             const actualProxies = nodeSelectGroup.proxies || [];
             if (JSON.stringify(actualProxies.sort()) !== JSON.stringify(expectedProxies.sort())) {
                 passed = false;
