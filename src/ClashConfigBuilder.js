@@ -7,8 +7,10 @@ import { downgradeByCaps } from './ir/core.js';
 import { t } from './i18n/index.js';
 import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 
+// Clash 配置生成器
 export class ClashConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry) {
+        // 如果没有提供基础配置，则使用默认的 Clash 配置
         if (!baseConfig) {
             baseConfig = CLASH_CONFIG;
         }
@@ -19,26 +21,29 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.manualGroupName = null;
     }
 
+    // 获取所有代理
     getProxies() {
         return this.config.proxies || [];
     }
 
+    // 获取代理的名称
     getProxyName(proxy) {
         return proxy.name;
     }
 
+    // 将中间表示 (IR) 转换为 Clash 的代理格式
     convertProxy(proxy) {
-        // Since all parsers now produce IR, we can directly map it to the target format.
         try {
             const downgraded = downgradeByCaps(proxy, 'clash');
             const mapped = mapIRToClash(downgraded, proxy);
             if (mapped) return mapped;
         } catch (e) {
-            console.error(`Failed to map IR to Clash config for proxy: ${proxy.tags?.[0]}`, e);
+            console.error(`将 IR 映射到 Clash 配置失败: ${proxy.tags?.[0]}`, e);
         }
-        return null; // Return null if mapping fails
+        return null;
     }
 
+    // 添加代理到配置中，并处理重名问题
     addProxyToConfig(proxy) {
         this.config.proxies = this.config.proxies || [];
 
@@ -53,6 +58,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.config.proxies.push(proxy);
     }
 
+    // 添加自动选择组 (URL Test)
     addAutoSelectGroup(proxyList) {
         this.config['proxy-groups'] = this.config['proxy-groups'] || [];
         const normalize = (s) => typeof s === 'string' ? s.trim() : s;
@@ -69,6 +75,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加节点选择组 (Select)
     addNodeSelectGroup(proxyList) {
         this.config['proxy-groups'] = this.config['proxy-groups'] || [];
         const normalize = (s) => typeof s === 'string' ? s.trim() : s;
@@ -88,6 +95,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 构建选择器组的成员列表
     buildSelectGroupMembers(proxyList = []) {
         return buildAggregatedMembers({
             groupByCountry: this.groupByCountry,
@@ -97,6 +105,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加各种出站策略组
     addOutboundGroups(outbounds, proxyList) {
         outbounds.forEach(outbound => {
             if (outbound !== t('outboundNames.Node Select')) {
@@ -115,6 +124,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加自定义规则对应的出站组
     addCustomRuleGroups(proxyList) {
         if (Array.isArray(this.customRules)) {
             this.customRules.forEach(rule => {
@@ -133,6 +143,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    // 添加回退组
     addFallBackGroup(proxyList) {
         const normalize = (s) => typeof s === 'string' ? s.trim() : s;
         const name = t('outboundNames.Fall Back');
@@ -146,6 +157,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加按国家/地区分组
     addCountryGroups() {
         const proxies = this.getProxies();
         const countryGroups = {};
@@ -217,18 +229,19 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         return generateRules(this.selectedRules, this.customRules);
     }
 
+    // 格式化最终的 Clash 配置
     formatConfig() {
-        // If remote YAML provided proxy-groups, sanitize their proxy lists to
-        // remove entries that don't exist as proxies or groups.
         const rules = this.generateRules();
         const ruleResults = [];
 
+        // 生成规则提供者
         const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, this.customRules);
         this.config['rule-providers'] = {
             ...site_rule_providers,
             ...ip_rule_providers
         };
 
+        // 生成规则
         rules.filter(rule => !!rule.domain_suffix || !!rule.domain_keyword).map(rule => {
             rule.domain_suffix.forEach(suffix => {
                 ruleResults.push(`DOMAIN-SUFFIX,${suffix},${t('outboundNames.'+ rule.outbound)}`);
@@ -256,7 +269,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             });
         });
 
-        // Sanitize proxy-groups: ensure their proxy references exist
+        // 清理代理组，确保引用的代理或组存在
         const normalize = (s) => typeof s === 'string' ? s.trim() : s;
         const groups = this.config['proxy-groups'] || [];
         if (Array.isArray(groups) && groups.length > 0) {
@@ -271,7 +284,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
                 const filtered = g.proxies
                     .map(x => typeof x === 'string' ? x.trim() : x)
                     .filter(x => typeof x === 'string' && validNames.has(x));
-                // de-duplicate while preserving order
+                // 去重并保持顺序
                 const seen = new Set();
                 const deduped = filtered.filter(x => (seen.has(x) ? false : (seen.add(x), true)));
                 return { ...g, proxies: deduped };
@@ -281,6 +294,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.config.rules = [...ruleResults];
         this.config.rules.push(`MATCH,${t('outboundNames.Fall Back')}`);
 
+        // 将最终配置转换为 YAML 格式
         return yaml.dump(this.config);
     }
 }

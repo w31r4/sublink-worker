@@ -1,134 +1,138 @@
 import { t } from './i18n/index.js';
 
+// Sing-box 规则集的基础 URL
 export const SITE_RULE_SET_BASE_URL = 'https://gh-proxy.com/https://raw.githubusercontent.com/lyc8503/sing-box-rules/refs/heads/rule-set-geosite/';
 export const IP_RULE_SET_BASE_URL = 'https://gh-proxy.com/https://raw.githubusercontent.com/lyc8503/sing-box-rules/refs/heads/rule-set-geoip/';
+// Clash 规则集的基础 URL
 export const CLASH_SITE_RULE_SET_BASE_URL = 'https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/';
 export const CLASH_IP_RULE_SET_BASE_URL = 'https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/';
+// Surge 规则集的基础 URL
 export const SURGE_SITE_RULE_SET_BASEURL = 'https://gh-proxy.com/https://github.com/NSZA156/surge-geox-rules/raw/refs/heads/release/geo/geosite/'
 export const SURGE_IP_RULE_SET_BASEURL = 'https://gh-proxy.com/https://github.com/NSZA156/surge-geox-rules/raw/refs/heads/release/geo/geoip/'
-// Custom rules
+// 自定义规则 (当前为空)
 export const CUSTOM_RULES = [];
-// Unified rule structure
+// 统一的规则结构，定义了各种服务的路由规则
 export const UNIFIED_RULES = [
 	{
-		name: 'Ad Block',
+		name: 'Ad Block', // 广告屏蔽
 		outbound: t('outboundNames.Ad Block'),
 		site_rules: ['category-ads-all'],
 		ip_rules: []
 	},
 	{
-		name: 'AI Services',
+		name: 'AI Services', // AI 服务
 		outbound: t('outboundNames.AI Services'),
 		site_rules: ['category-ai-!cn',],
 		ip_rules: []
 	},
 	{
-		name: 'Bilibili',
+		name: 'Bilibili', // Bilibili
 		outbound: t('outboundNames.Bilibili'),
 		site_rules: ['bilibili'],
 		ip_rules: []
 	},
 	{
-		name: 'Youtube',
+		name: 'Youtube', // Youtube
 		outbound: t('outboundNames.Youtube'),
 		site_rules: ['youtube'],
 		ip_rules: []
 	},
 	{
-		name: 'Google',
+		name: 'Google', // 谷歌服务
 		outbound: t('outboundNames.Google'),
 		site_rules: ['google'],
 		ip_rules: ['google']
 	},
 	{
-		name: 'Private',
+		name: 'Private', // 私有网络
 		outbound: t('outboundNames.Private'),
 		site_rules: [],
 		ip_rules: ['private']
 	},
 	{
-		name: 'Location:CN',
+		name: 'Location:CN', // 中国大陆
 		outbound: t('outboundNames.Location:CN'),
 		site_rules: ['geolocation-cn','cn'],
 		ip_rules: ['cn']
 	},
 	{
-		name: 'Telegram',
+		name: 'Telegram', // Telegram
 		outbound: t('outboundNames.Telegram'),
 		site_rules: [],
 		ip_rules: ['telegram']
 	},
 	{
-		name: 'Github',
+		name: 'Github', // Github
 		outbound: t('outboundNames.Github'),
 		site_rules: ['github', 'gitlab'],
 		ip_rules: []
 	},
 	{
-		name: 'Microsoft',
+		name: 'Microsoft', // 微软服务
 		outbound: t('outboundNames.Microsoft'),
 		site_rules: ['microsoft'],
 		ip_rules: []
 	},
 	{
-		name: 'Apple',
+		name: 'Apple', // 苹果服务
 		outbound: t('outboundNames.Apple'),
 		site_rules: ['apple'],
 		ip_rules: []
 	},
 	{
-		name: 'Social Media',
+		name: 'Social Media', // 社交媒体
 		outbound: t('outboundNames.Social Media'),
 		site_rules: ['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin'],
 		ip_rules: []
 	},
 	{
-		name: 'Streaming',
+		name: 'Streaming', // 流媒体服务
 		outbound: t('outboundNames.Streaming'),
 		site_rules: ['netflix', 'hulu', 'disney', 'hbo', 'amazon','bahamut'],
 		ip_rules: []
 	},
 	{
-		name: 'Gaming',
+		name: 'Gaming', // 游戏平台
 		outbound: t('outboundNames.Gaming'),
 		site_rules: ['steam', 'epicgames', 'ea', 'ubisoft', 'blizzard'],
 		ip_rules: []
 	},
 	{
-		name: 'Education',
+		name: 'Education', // 教育平台
 		outbound: t('outboundNames.Education'),
 		site_rules: ['coursera', 'edx', 'udemy', 'khanacademy', 'category-scholar-!cn'],
 		ip_rules: []
 	},
 	{
-		name: 'Financial',
+		name: 'Financial', // 金融服务
 		outbound: t('outboundNames.Financial'),
 		site_rules: ['paypal', 'visa', 'mastercard','stripe','wise'],
 		ip_rules: []
 	},
 	{
-		name: 'Cloud Services',
+		name: 'Cloud Services', // 云服务
 		outbound: t('outboundNames.Cloud Services'),
 		site_rules: ['aws', 'azure', 'digitalocean', 'heroku', 'dropbox'],
 		ip_rules: []
 	},
 	{
-		name: 'Non-China',
+		name: 'Non-China', // 非中国大陆
 		outbound: t('outboundNames.Non-China'),
 		site_rules: ['geolocation-!cn'],
 		ip_rules: []
 	}
 ];
 
+// 预定义的规则集，方便用户选择
 export const PREDEFINED_RULE_SETS = {
-	minimal: ['Location:CN', 'Private', 'Non-China'],
-	balanced: ['Location:CN', 'Private', 'Non-China','Github', 'Google', 'Youtube', 'AI Services', 'Telegram'],
-	comprehensive: UNIFIED_RULES.map(rule => rule.name)
+	minimal: ['Location:CN', 'Private', 'Non-China'], // 最小集
+	balanced: ['Location:CN', 'Private', 'Non-China','Github', 'Google', 'Youtube', 'AI Services', 'Telegram'], // 平衡集
+	comprehensive: UNIFIED_RULES.map(rule => rule.name) // 全量集
   };
   
 
 
-// Generate SITE_RULE_SETS and IP_RULE_SETS from UNIFIED_RULES
+// 从统一规则生成 Sing-box 的站点规则集
 export const SITE_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	rule.site_rules.forEach(site_rule => {
 		acc[site_rule] = `geosite-${site_rule}.srs`;
@@ -136,6 +140,7 @@ export const SITE_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	return acc;
 }, {});
 
+// 从统一规则生成 Sing-box 的 IP 规则集
 export const IP_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	rule.ip_rules.forEach(ip_rule => {
 		acc[ip_rule] = `geoip-${ip_rule}.srs`;
@@ -143,7 +148,7 @@ export const IP_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	return acc;
 }, {});
 
-// Generate CLASH_SITE_RULE_SETS and CLASH_IP_RULE_SETS for .mrs format
+// 从统一规则生成 Clash 的站点规则集 (.mrs 格式)
 export const CLASH_SITE_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	rule.site_rules.forEach(site_rule => {
 		acc[site_rule] = `${site_rule}.mrs`;
@@ -151,6 +156,7 @@ export const CLASH_SITE_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	return acc;
 }, {});
 
+// 从统一规则生成 Clash 的 IP 规则集 (.mrs 格式)
 export const CLASH_IP_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	rule.ip_rules.forEach(ip_rule => {
 		acc[ip_rule] = `${ip_rule}.mrs`;
@@ -158,7 +164,7 @@ export const CLASH_IP_RULE_SETS = UNIFIED_RULES.reduce((acc, rule) => {
 	return acc;
 }, {});
 
-// Helper function to get outbounds based on selected rule names
+// 根据选择的规则名称获取出站策略名称
 export function getOutbounds(selectedRuleNames) {
     if (!selectedRuleNames || !Array.isArray(selectedRuleNames)) {
         return [];
@@ -168,18 +174,21 @@ export function getOutbounds(selectedRuleNames) {
       .map(rule => rule.name);
 }
 
-// Helper function to generate rules based on selected rule names
+// 根据选择的规则名称生成路由规则
 export function generateRules(selectedRules = [], customRules = []) {
+	// 如果是预定义规则集的名称，则替换为具体的规则列表
 	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
 	  selectedRules = PREDEFINED_RULE_SETS[selectedRules];
 	}
   
+	// 如果没有选择规则，则使用最小集
 	if (!selectedRules || selectedRules.length === 0) {
 	  selectedRules = PREDEFINED_RULE_SETS.minimal;
 	}
   
 	const rules = [];
   
+	// 从统一规则中筛选出被选中的规则
 	UNIFIED_RULES.forEach(rule => {
 	  if (selectedRules.includes(rule.name)) {
 		rules.push({
@@ -192,6 +201,7 @@ export function generateRules(selectedRules = [], customRules = []) {
 	  }
 	});
   
+	// 将自定义规则添加到规则列表的开头 (高优先级)
 	customRules.reverse();
 	customRules.forEach((rule) => {
 		rules.unshift({
@@ -209,6 +219,7 @@ export function generateRules(selectedRules = [], customRules = []) {
   }
 
 
+// 生成 Sing-box 的远程规则集配置
 export function generateRuleSets(selectedRules = [], customRules = []) {
   if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
     selectedRules = PREDEFINED_RULE_SETS[selectedRules];
@@ -225,6 +236,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
 
   const ruleSets = [];
 
+  // 收集所有需要用到的规则
   UNIFIED_RULES.forEach(rule => {
     if (selectedRulesSet.has(rule.name)) {
       rule.site_rules.forEach(siteRule => siteRuleSets.add(siteRule));
@@ -234,6 +246,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
   
 
 
+  // 生成站点规则集配置
   const site_rule_sets = Array.from(siteRuleSets).map(rule => ({
     tag: rule,
     type: 'remote',
@@ -241,6 +254,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
     url: `${SITE_RULE_SET_BASE_URL}${SITE_RULE_SETS[rule]}`,
   }));
 
+  // 生成 IP 规则集配置
   const ip_rule_sets = Array.from(ipRuleSets).map(rule => ({
     tag: `${rule}-ip`,
     type: 'remote',
@@ -248,6 +262,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
     url: `${IP_RULE_SET_BASE_URL}${IP_RULE_SETS[rule]}`,
   }));
 
+  // 如果没有选择 "Non-China" 规则，则手动添加
   if(!selectedRules.includes('Non-China')){
 	site_rule_sets.push({
 		tag: 'geolocation-!cn',
@@ -257,6 +272,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
 	});
   }
 
+  // 添加自定义规则集
   if(customRules){
 	customRules.forEach(rule => {
 		if(rule.site!=''){
@@ -287,7 +303,7 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
   return { site_rule_sets, ip_rule_sets };
 }
 
-// Generate rule sets for Clash using .mrs format
+// 生成 Clash 的远程规则集配置
 export function generateClashRuleSets(selectedRules = [], customRules = []) {
   if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
     selectedRules = PREDEFINED_RULE_SETS[selectedRules];
@@ -312,6 +328,7 @@ export function generateClashRuleSets(selectedRules = [], customRules = []) {
   const site_rule_providers = {};
   const ip_rule_providers = {};
 
+  // 生成站点规则提供者配置
   Array.from(siteRuleSets).forEach(rule => {
     site_rule_providers[rule] = {
       type: 'http',
@@ -323,6 +340,7 @@ export function generateClashRuleSets(selectedRules = [], customRules = []) {
     };
   });
 
+  // 生成 IP 规则提供者配置
   Array.from(ipRuleSets).forEach(rule => {
     ip_rule_providers[rule] = {
       type: 'http',
@@ -334,7 +352,7 @@ export function generateClashRuleSets(selectedRules = [], customRules = []) {
     };
   });
 
-  // Add Non-China rule set if not included
+  // 如果没有选择 "Non-China" 规则，则手动添加
   if(!selectedRules.includes('Non-China')){
     site_rule_providers['geolocation-!cn'] = {
       type: 'http',
@@ -346,7 +364,7 @@ export function generateClashRuleSets(selectedRules = [], customRules = []) {
     };
   }
 
-  // Add custom rules
+  // 添加自定义规则提供者
   if(customRules){
     customRules.forEach(rule => {
       if(rule.site!=''){
@@ -381,7 +399,7 @@ export function generateClashRuleSets(selectedRules = [], customRules = []) {
   return { site_rule_providers, ip_rule_providers };
 }
 
-// Singbox configuration
+// Sing-box 基础配置模板
 export const SING_BOX_CONFIG = {
 	dns: {
 		servers: [
@@ -472,6 +490,7 @@ export const SING_BOX_CONFIG = {
 	}
 };
 
+// Clash 基础配置模板
 export const CLASH_CONFIG = {
     'port': 7890,
     'socks-port': 7891,
@@ -489,7 +508,7 @@ export const CLASH_CONFIG = {
       'asn': "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb"
     },
     'rule-providers': {
-      // 将由代码自动生成
+      // 将由代码动态生成
     },
     'dns': {
         'enable': true,
@@ -519,6 +538,7 @@ export const CLASH_CONFIG = {
     'proxy-groups': []
 };
 
+// Surge 基础配置模板
 export const SURGE_CONFIG = {
 	'general': {
         'allow-wifi-access': false,

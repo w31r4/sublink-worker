@@ -1,6 +1,12 @@
-// Map Core IR to Clash proxy object (scaffold)
+/**
+ * 将核心内部表示 (IR) 映射到 Clash 代理对象。
+ * @param {object} ir - 内部表示 (IR) 对象。
+ * @param {object} [original] - 原始解析出的对象，用于备用。
+ * @returns {object|null} Clash 代理对象，或在无法映射时返回 null。
+ */
 export function mapIRToClash(ir, original) {
   if (!ir) return null;
+  // 从 IR 中提取通用字段
   const name = ir.tags?.[0] || ir.tag || 'proxy';
   const auth = ir.auth || original?.auth || {};
   const transport = ir.transport || original?.transport;
@@ -13,6 +19,7 @@ export function mapIRToClash(ir, original) {
     port: ir.port,
   };
 
+  // 根据不同的协议类型进行映射
   if (ir.kind === 'anytls') {
     const out = {
       ...base,
@@ -77,6 +84,7 @@ export function mapIRToClash(ir, original) {
       ...((ir.packetEncoding || ir.packet_encoding) ? { 'packet-encoding': ir.packetEncoding || ir.packet_encoding } : {}),
       ...(ir.flow ? { flow: ir.flow } : {}),
     };
+    // 处理不同的传输协议
     if (transport?.type === 'ws') {
       out['ws-opts'] = { path: transport.path, headers: transport.headers };
     } else if (transport?.type === 'grpc') {
@@ -93,6 +101,7 @@ export function mapIRToClash(ir, original) {
     } else if (transport?.type === 'h2') {
       out['h2-opts'] = { path: transport.path, host: transport.host };
     }
+    // 处理 Reality
     if (tls?.reality) {
       out['reality-opts'] = {
         'public-key': tls.reality.publicKey || tls.reality.public_key,
@@ -184,6 +193,6 @@ export function mapIRToClash(ir, original) {
     return out;
   }
 
-  // Not implemented here → let builder fallback handle
+  // 如果此处未实现，则让构建器进行回退处理
   return null;
 }

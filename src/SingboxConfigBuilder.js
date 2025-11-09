@@ -6,11 +6,14 @@ import { downgradeByCaps } from './ir/core.js';
 import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 import { t } from './i18n/index.js';
 
+// Sing-box 配置生成器
 export class SingboxConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false) {
+        // 如果没有提供基础配置，则使用默认的 Sing-box 配置
         if (baseConfig === undefined) {
             baseConfig = SING_BOX_CONFIG;
             if (baseConfig.dns && baseConfig.dns.servers) {
+                // 更新 DNS 配置中的绕过选项
                 baseConfig.dns.servers[0].detour = t('outboundNames.Node Select');
             }
         }
@@ -21,25 +24,29 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         this.manualGroupName = null;
     }
 
+    // 获取所有代理出站
     getProxies() {
         return this.config.outbounds.filter(outbound => outbound?.server != undefined);
     }
 
+    // 获取代理的名称 (tag)
     getProxyName(proxy) {
         return proxy.tag;
     }
 
+    // 将中间表示 (IR) 转换为 Sing-box 的代理格式
     convertProxy(proxy) {
         try {
             const downgraded = downgradeByCaps(proxy, 'singbox');
             const mapped = mapIRToSingbox(downgraded, proxy);
             if (mapped) return mapped;
         } catch (e) {
-            console.error(`Failed to map IR to Singbox config for proxy: ${proxy.tags?.[0]}`, e);
+            console.error(`将 IR 映射到 Sing-box 配置失败: ${proxy.tags?.[0]}`, e);
         }
         return null;
     }
 
+    // 添加代理到配置中，并处理重名问题
     addProxyToConfig(proxy) {
         this.config.outbounds = this.config.outbounds || [];
 
@@ -54,6 +61,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         this.config.outbounds.push(proxy);
     }
 
+    // 添加自动选择组 (URL Test)
     addAutoSelectGroup(proxyList) {
         this.config.outbounds.unshift({
             type: "urltest",
@@ -62,6 +70,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加节点选择组 (Selector)
     addNodeSelectGroup(proxyList) {
         const members = buildNodeSelectMembers({
             groupByCountry: this.groupByCountry,
@@ -76,6 +85,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 构建选择器组的成员列表
     buildSelectorMembers(proxyList = []) {
         return buildAggregatedMembers({
             groupByCountry: this.groupByCountry,
@@ -85,6 +95,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加各种出站策略组
     addOutboundGroups(outbounds, proxyList) {
         outbounds.forEach(outbound => {
             if (outbound !== t('outboundNames.Node Select')) {
@@ -98,6 +109,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加自定义规则对应的出站组
     addCustomRuleGroups(proxyList) {
         if (Array.isArray(this.customRules)) {
             this.customRules.forEach(rule => {
@@ -111,6 +123,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    // 添加回退组
     addFallBackGroup(proxyList) {
         const selectorMembers = this.buildSelectorMembers(proxyList);
         this.config.outbounds.push({
@@ -120,6 +133,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加按国家/地区分组
     addCountryGroups() {
         const proxies = this.getProxies();
         const countryGroups = {};
@@ -188,12 +202,14 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         this.manualGroupName = manualGroupName;
     }
 
+    // 格式化最终的 Sing-box 配置
     formatConfig() {
         const rules = generateRules(this.selectedRules, this.customRules);
         const { site_rule_sets, ip_rule_sets } = generateRuleSets(this.selectedRules,this.customRules);
 
         this.config.route.rule_set = [...site_rule_sets, ...ip_rule_sets];
 
+        // 根据规则生成路由条目
         rules.filter(rule => !!rule.domain_suffix || !!rule.domain_keyword).map(rule => {
             this.config.route.rules.push({
                 domain_suffix: rule.domain_suffix,
@@ -231,6 +247,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             });
         });
 
+        // 添加一些内置的规则
         this.config.route.rules.unshift(
             { clash_mode: 'direct', outbound: 'DIRECT' },
             { clash_mode: 'global', outbound: t('outboundNames.Node Select') },

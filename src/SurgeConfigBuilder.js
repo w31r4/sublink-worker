@@ -4,12 +4,10 @@ import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, g
 import { t } from './i18n/index.js';
 import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 
+// Surge 配置生成器
 export class SurgeConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry) {
-        // Not yet implemented, set aside for later use ;)
-        // if (!baseConfig) {
-        //     baseConfig = SURGE_CONFIG;
-        // }
+        // 当前固定使用默认的 Surge 配置
         baseConfig = SURGE_CONFIG;
         super(inputString, baseConfig, lang, userAgent, groupByCountry);
         this.selectedRules = selectedRules;
@@ -19,19 +17,23 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         this.manualGroupName = null;
     }
 
+    // 设置订阅 URL
     setSubscriptionUrl(url) {
         this.subscriptionUrl = url;
         return this;
     }
 
+    // 获取所有代理
     getProxies() {
         return this.config.proxies || [];
     }
 
+    // 从代理字符串中获取代理名称
     getProxyName(proxy) {
         return proxy.split('=')[0].trim();
     }
 
+    // 将中间表示 (IR) 转换为 Surge 的代理格式
     convertProxy(proxy) {
         const tag = proxy.tags?.[0] || proxy.tag || 'proxy';
         const server = proxy.host;
@@ -130,11 +132,12 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
                 break;
             }
             default:
-                surgeProxy = `# ${tag} - Unsupported proxy type: ${proxy.kind}`;
+                surgeProxy = `# ${tag} - 不支持的代理类型: ${proxy.kind}`;
         }
         return surgeProxy;
     }
 
+    // 添加代理到配置中，并处理重名问题
     addProxyToConfig(proxy) {
         this.config.proxies = this.config.proxies || [];
 
@@ -157,12 +160,14 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         this.config.proxies.push(proxy);
     }
 
+    // 创建代理组字符串
     createProxyGroup(name, type, options = [], extraConfig = '') {
         const sanitized = this.sanitizeOptions(options);
         const optionsPart = sanitized.length > 0 ? `, ${sanitized.join(', ')}` : '';
         return `${name} = ${type}${optionsPart}${extraConfig}`;
     }
 
+    // 清理和去重代理组选项
     sanitizeOptions(options = []) {
         const normalize = (s) => typeof s === 'string' ? s.trim() : s;
         const seen = new Set();
@@ -176,6 +181,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
     }
 
+    // 构建节点选择组的选项
     buildNodeSelectOptions(proxyList = []) {
         const members = buildNodeSelectMembers({
             groupByCountry: this.groupByCountry,
@@ -186,6 +192,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         return this.sanitizeOptions(members);
     }
 
+    // 构建聚合的代理组选项
     buildAggregatedOptions(proxyList = []) {
         const members = buildAggregatedMembers({
             groupByCountry: this.groupByCountry,
@@ -198,6 +205,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
 
     withDirectReject(options = []) { return this.sanitizeOptions(options); }
 
+    // 添加自动选择组 (URL Test)
     addAutoSelectGroup(proxyList) {
         this.config['proxy-groups'] = this.config['proxy-groups'] || [];
         this.config['proxy-groups'].push(
@@ -210,6 +218,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         );
     }
 
+    // 添加节点选择组 (Select)
     addNodeSelectGroup(proxyList) {
         const options = this.buildNodeSelectOptions(proxyList);
         this.config['proxy-groups'].push(
@@ -217,6 +226,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         );
     }
 
+    // 添加各种出站策略组
     addOutboundGroups(outbounds, proxyList) {
         outbounds.forEach(outbound => {
             if (outbound !== t('outboundNames.Node Select')) {
@@ -228,6 +238,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         });
     }
 
+    // 添加自定义规则对应的出站组
     addCustomRuleGroups(proxyList) {
         if (Array.isArray(this.customRules)) {
             this.customRules.forEach(rule => {
@@ -239,6 +250,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    // 添加回退组
     addFallBackGroup(proxyList) {
         const options = this.buildAggregatedOptions(proxyList);
         this.config['proxy-groups'].push(
@@ -246,6 +258,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         );
     }
 
+    // 添加按国家/地区分组
     addCountryGroups() {
         const proxies = this.getProxies();
         const countryGroups = {};
@@ -307,15 +320,18 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         this.manualGroupName = manualGroupName;
     }
 
+    // 格式化最终的 Surge 配置
     formatConfig() {
         const rules = generateRules(this.selectedRules, this.customRules);
         let finalConfig = [];
 
+        // 如果有订阅 URL，则添加托管配置头
         if (this.subscriptionUrl) {
             finalConfig.push(`#!MANAGED-CONFIG ${this.subscriptionUrl} interval=43200 strict=false`);
-            finalConfig.push('');  // 添加一个空行
+            finalConfig.push('');
         }
 
+        // 添加 [General] 部分
         finalConfig.push('[General]');
         if (this.config.general) {
             Object.entries(this.config.general).forEach(([key, value]) => {
@@ -323,6 +339,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         }
 
+        // 添加 [Replica] 部分
         if (this.config.replica) {
             finalConfig.push('\n[Replica]');
             Object.entries(this.config.replica).forEach(([key, value]) => {
@@ -330,22 +347,23 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         }
 
+        // 添加 [Proxy] 部分
         finalConfig.push('\n[Proxy]');
         finalConfig.push('DIRECT = direct');
         if (this.config.proxies) {
             finalConfig.push(...this.config.proxies);
         }
 
+        // 添加 [Proxy Group] 部分
         finalConfig.push('\n[Proxy Group]');
         if (this.config['proxy-groups']) {
             finalConfig.push(...this.config['proxy-groups']);
         }
 
+        // 添加 [Rule] 部分
         finalConfig.push('\n[Rule]');
 
-        // Rule-Set & Domain Rules & IP Rules:  To reduce DNS leaks and unnecessary DNS queries,
-        // domain & non-IP rules must precede IP rules
-
+        // 添加域名和 IP 规则
         rules.filter(rule => !!rule.domain_suffix).map(rule => {
             rule.domain_suffix.forEach(suffix => {
                 finalConfig.push(`DOMAIN-SUFFIX,${suffix},${t('outboundNames.'+ rule.outbound)}`);
@@ -376,11 +394,13 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         });
 
+        // 添加最终的 FINAL 规则
         finalConfig.push('FINAL,' + t('outboundNames.Fall Back'));
 
         return finalConfig.join('\n');
     }
 
+    // 获取当前 URL (在 Worker 环境中可能不可用)
     getCurrentUrl() {
         try {
             if (typeof self !== 'undefined' && self.location) {
@@ -388,7 +408,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             }
             return null;
         } catch (error) {
-            console.error('Error getting current URL:', error);
+            console.error('获取当前 URL 出错:', error);
             return null;
         }
     }

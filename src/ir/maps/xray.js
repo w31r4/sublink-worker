@@ -1,5 +1,12 @@
+/**
+ * 将核心内部表示 (IR) 映射到 Xray 出站对象。
+ * @param {object} ir - 内部表示 (IR) 对象。
+ * @param {object} [original] - 原始解析出的对象，用于备用。
+ * @returns {object|null} Xray 出站对象，或在无法映射时返回 null。
+ */
 export function mapIRToXray(ir, original) {
   if (!ir) return null;
+  // 从 IR 中提取通用字段
   const auth = ir.auth || original?.auth || {};
   const transport = ir.transport || original?.transport;
   const tls = ir.tls || original?.tls;
@@ -7,6 +14,7 @@ export function mapIRToXray(ir, original) {
   const port = ir.port;
   const stream = buildStreamSettings(ir, transport, tls);
 
+  // 根据不同的协议类型进行映射
   switch (ir.kind) {
     case 'vmess':
       return {
@@ -44,9 +52,17 @@ export function mapIRToXray(ir, original) {
   }
 }
 
+/**
+ * 根据 IR、传输和 TLS 设置构建 Xray 的 streamSettings 对象。
+ * @param {object} ir - 内部表示 (IR) 对象。
+ * @param {object} transport - 传输设置对象。
+ * @param {object} tls - TLS 设置对象。
+ * @returns {object} Xray 的 streamSettings 对象。
+ */
 function buildStreamSettings(ir, transport, tls) {
   const network = transport?.type || ir.network || 'tcp';
   const stream = { network };
+  // 根据网络类型构建不同的设置
   if (network === 'ws') {
     stream.wsSettings = { path: transport?.path, headers: transport?.headers };
   } else if (network === 'grpc') {
@@ -54,6 +70,7 @@ function buildStreamSettings(ir, transport, tls) {
   } else if (network === 'http' || network === 'h2') {
     stream.httpSettings = { path: transport?.path, host: transport?.host };
   }
+  // 处理 TLS 和 Reality 设置
   if (tls) {
     if (tls.reality) {
       stream.security = 'reality';

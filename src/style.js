@@ -1,4 +1,6 @@
+// 生成页面的CSS样式
 export const generateStyles = () => `
+  /* 亮色主题变量 */
   :root {
     --bg-color: #f0f2f5;
     --text-color: #495057;
@@ -25,6 +27,7 @@ export const generateStyles = () => `
     --muted-color: #6c757d;
   }
 
+  /* 暗色主题变量 */
   [data-theme="dark"] {
     --bg-color: #1a1a1a;
     --text-color: #e0e0e0;

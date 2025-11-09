@@ -2,17 +2,21 @@ import { parseUrlParams, parseServerInfo } from './url.js';
 import { parseBool, parseMaybeNumber, parseArray } from '../utils.js';
 import { createAnytlsNode } from '../ir/factory.js';
 
+// Anytls 协议的 URL 解析器
 export class AnytlsParser {
+  // 判断是否能解析该 URL
   canParse(url) {
     return url.startsWith('anytls://');
   }
 
+  // 解析 URL
   parse(url) {
     const { addressPart, params, name } = parseUrlParams(url);
     let password;
     let host;
     let port;
 
+    // 从 addressPart 中提取认证信息和服务器地址
     if (addressPart.includes('@')) {
       const [pwd, serverInfo] = addressPart.split('@');
       const parsed = parseServerInfo(serverInfo);
@@ -26,6 +30,7 @@ export class AnytlsParser {
       password = params.password || params.auth;
     }
 
+    // 解析 TLS 设置
     const tlsInsecure = parseBool(
       params['skip-cert-verify'] ?? params.insecure ?? params.allowInsecure ?? params.allow_insecure
     );
@@ -39,6 +44,7 @@ export class AnytlsParser {
     if (alpn) {
       tls.alpn = alpn;
     }
+    // 解析 uTLS (fingerprint) 设置
     if (params['client-fingerprint'] || params.client_fingerprint) {
       tls.utls = {
         enabled: true,
@@ -46,6 +52,7 @@ export class AnytlsParser {
       };
     }
 
+    // 创建并返回 Anytls 节点对象
     return createAnytlsNode({
       host,
       port,

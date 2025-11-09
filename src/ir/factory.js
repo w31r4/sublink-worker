@@ -1,5 +1,6 @@
-// IR Factory: Creates standardized Intermediate Representation nodes.
+// IR 工厂：用于创建标准化的内部表示（IR）节点。
 
+// 清理和规范化标签数组
 function sanitizeTags(tags) {
   if (!tags) return [];
   return []
@@ -9,21 +10,21 @@ function sanitizeTags(tags) {
 }
 
 /**
- * Creates a base IR node with common fields and performs basic validation.
- * @param {object} data - The input data from a parser.
- * @returns {object} The base IR node.
- * @throws {Error} if required fields are missing.
+ * 创建一个包含通用字段的基础 IR 节点，并执行基本验证。
+ * @param {object} data - 来自解析器的输入数据。
+ * @returns {object} 基础 IR 节点。
+ * @throws {Error} 如果缺少必需字段。
  */
 function createBaseNode(data) {
   if (!data.kind) {
-    throw new Error('kind is required for all nodes');
+    throw new Error('所有节点都需要 kind 字段');
   }
   if (!data.host || typeof data.port === 'undefined' || data.port === null) {
-    throw new Error('host and port are required for all nodes');
+    throw new Error('所有节点都需要 host 和 port 字段');
   }
   const port = Number(data.port);
   if (!Number.isFinite(port)) {
-    throw new Error('port must be a valid number');
+    throw new Error('端口必须是有效的数字');
   }
   const tags = sanitizeTags(data.tags);
   const node = {
@@ -34,11 +35,12 @@ function createBaseNode(data) {
     port,
     server_port: port,
     tags,
-    version: '1.0.0',
+    version: '1.0.0', // IR 版本
   };
   if (tags.length > 0) {
     node.tag = tags[0];
   }
+  // 添加可选的通用字段
   if (typeof data.udp !== 'undefined') node.udp = data.udp;
   if (data.network) node.network = data.network;
   if (data.transport) node.transport = data.transport;
@@ -53,13 +55,13 @@ function createBaseNode(data) {
 }
 
 /**
- * Creates a VMess IR node.
- * @param {object} data - The parsed VMess data.
- * @returns {object} The VMess IR node.
+ * 创建一个 VMess IR 节点。
+ * @param {object} data - 解析后的 VMess 数据。
+ * @returns {object} VMess IR 节点。
  */
 export function createVmessNode(data) {
   if (!data.uuid) {
-    throw new Error('uuid is required for VMess');
+    throw new Error('VMess 节点需要 uuid');
   }
   const base = createBaseNode({ ...data, kind: 'vmess' });
   base.auth = {
@@ -76,19 +78,20 @@ export function createVmessNode(data) {
   if (typeof data.tcp_fast_open !== 'undefined') {
     base.tcp_fast_open = data.tcp_fast_open;
   }
+  // 为方便访问，将核心认证信息提升到顶层
   base.uuid = base.auth.uuid;
   base.security = base.auth.method;
   return base;
 }
 
 /**
- * Creates a VLess IR node.
- * @param {object} data - The parsed VLess data.
- * @returns {object} The VLess IR node.
+ * 创建一个 VLess IR 节点。
+ * @param {object} data - 解析后的 VLess 数据。
+ * @returns {object} VLess IR 节点。
  */
 export function createVlessNode(data) {
   if (!data.uuid) {
-    throw new Error('uuid is required for VLess');
+    throw new Error('VLess 节点需要 uuid');
   }
   const base = createBaseNode({ ...data, kind: 'vless' });
   base.auth = {
@@ -106,13 +109,13 @@ export function createVlessNode(data) {
 }
 
 /**
- * Creates a Trojan IR node.
- * @param {object} data - The parsed Trojan data.
- * @returns {object} The Trojan IR node.
+ * 创建一个 Trojan IR 节点。
+ * @param {object} data - 解析后的 Trojan 数据。
+ * @returns {object} Trojan IR 节点。
  */
 export function createTrojanNode(data) {
   if (!data.password) {
-    throw new Error('password is required for Trojan');
+    throw new Error('Trojan 节点需要 password');
   }
   const base = createBaseNode({ ...data, kind: 'trojan' });
   base.auth = {
@@ -126,13 +129,13 @@ export function createTrojanNode(data) {
 }
 
 /**
- * Creates a Shadowsocks IR node.
- * @param {object} data - The parsed Shadowsocks data.
- * @returns {object} The Shadowsocks IR node.
+ * 创建一个 Shadowsocks IR 节点。
+ * @param {object} data - 解析后的 Shadowsocks 数据。
+ * @returns {object} Shadowsocks IR 节点。
  */
 export function createShadowsocksNode(data) {
   if (!data.password || !data.method) {
-    throw new Error('password and method are required for Shadowsocks');
+    throw new Error('Shadowsocks 节点需要 password 和 method');
   }
   const base = createBaseNode({ ...data, kind: 'shadowsocks' });
   base.auth = {
@@ -145,13 +148,13 @@ export function createShadowsocksNode(data) {
 }
 
 /**
- * Creates a Hysteria2 IR node.
- * @param {object} data - The parsed Hysteria2 data.
- * @returns {object} The Hysteria2 IR node.
+ * 创建一个 Hysteria2 IR 节点。
+ * @param {object} data - 解析后的 Hysteria2 数据。
+ * @returns {object} Hysteria2 IR 节点。
  */
 export function createHysteria2Node(data) {
   if (!data.password) {
-    throw new Error('password is required for Hysteria2');
+    throw new Error('Hysteria2 节点需要 password');
   }
   const base = createBaseNode({ ...data, kind: 'hysteria2' });
   base.auth = {
@@ -159,7 +162,7 @@ export function createHysteria2Node(data) {
   };
   base.password = data.password;
   
-  // Hysteria2 specific fields
+  // Hysteria2 特定字段
   base.proto = {
     hy2: {
       obfs: data.obfs,
@@ -172,6 +175,7 @@ export function createHysteria2Node(data) {
       fast_open: data.fast_open,
     },
   };
+  // 为方便访问，将特定字段提升到顶层
   base.obfs = data.obfs;
   base.authPayload = data.auth;
   base.up = data.up;
@@ -189,13 +193,13 @@ export function createHysteria2Node(data) {
 }
 
 /**
- * Creates an Anytls IR node.
- * @param {object} data - The parsed Anytls data.
- * @returns {object} The Anytls IR node.
+ * 创建一个 Anytls IR 节点。
+ * @param {object} data - 解析后的 Anytls 数据。
+ * @returns {object} Anytls IR 节点。
  */
 export function createAnytlsNode(data) {
   if (!data.password) {
-    throw new Error('password is required for Anytls');
+    throw new Error('Anytls 节点需要 password');
   }
   const base = createBaseNode({ ...data, kind: 'anytls' });
   base.auth = {
@@ -203,7 +207,7 @@ export function createAnytlsNode(data) {
   };
   base.password = data.password;
 
-  // Anytls specific fields
+  // Anytls 特定字段
   base.proto = {
     anytls: {
       idle_session_check_interval: data.idle_session_check_interval,
@@ -231,9 +235,9 @@ export function createAnytlsNode(data) {
 }
 
 /**
- * Creates an HTTP/S IR node.
- * @param {object} data - The parsed HTTP/S data.
- * @returns {object} The HTTP/S IR node.
+ * 创建一个 HTTP/S IR 节点。
+ * @param {object} data - 解析后的 HTTP/S 数据。
+ * @returns {object} HTTP/S IR 节点。
  */
 export function createHttpNode(data) {
   const base = createBaseNode({ ...data, kind: data.kind });
@@ -247,13 +251,13 @@ export function createHttpNode(data) {
 }
 
 /**
- * Creates a TUIC IR node.
- * @param {object} data - The parsed TUIC data.
- * @returns {object} The TUIC IR node.
+ * 创建一个 TUIC IR 节点。
+ * @param {object} data - 解析后的 TUIC 数据。
+ * @returns {object} TUIC IR 节点。
  */
 export function createTuicNode(data) {
   if (!data.uuid || !data.password) {
-    throw new Error('uuid and password are required for TUIC');
+    throw new Error('TUIC 节点需要 uuid 和 password');
   }
   const base = createBaseNode({ ...data, kind: 'tuic' });
   base.auth = {
@@ -263,7 +267,7 @@ export function createTuicNode(data) {
   base.uuid = data.uuid;
   base.password = data.password;
 
-  // TUIC specific fields
+  // TUIC 特定字段
   base.proto = {
     tuic: {
       congestion_control: data.congestion_control || 'bbr',

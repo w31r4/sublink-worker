@@ -4,8 +4,10 @@ import { mapIRToXray } from './ir/maps/xray.js';
 import { generateRules } from './config.js';
 import { parseCountryFromNodeName } from './utils.js';
 
+// Xray 配置生成器
 export class XrayConfigBuilder extends BaseConfigBuilder {
   constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, opts = {}) {
+    // 默认的基础配置
     const defaultBase = {
       log: { loglevel: 'warning' },
       outbounds: [
@@ -17,29 +19,32 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
     super(inputString, baseConfig || defaultBase, lang, userAgent, groupByCountry);
     this.selectedRules = selectedRules;
     this.customRules = customRules;
-    this.useBalancer = !!opts?.useBalancer;
+    this.useBalancer = !!opts?.useBalancer; // 是否使用负载均衡
   }
 
+  // 获取所有代理出站
   getProxies() {
-    // For Xray, outbounds don't expose server directly; just return tagged outbounds
     return (this.config.outbounds || []).filter(o => typeof o?.tag === 'string');
   }
 
+  // 获取代理的名称 (tag)
   getProxyName(proxy) {
     return proxy.tag;
   }
 
+  // 将中间表示 (IR) 转换为 Xray 的代理格式
   convertProxy(proxy) {
     try {
       const downgraded = downgradeByCaps(proxy, 'xray');
       const mapped = mapIRToXray(downgraded, proxy);
       if (mapped) return mapped;
     } catch (e) {
-      console.error(`Failed to map IR to Xray config for proxy: ${proxy.tags?.[0]}`, e);
+      console.error(`将 IR 映射到 Xray 配置失败: ${proxy.tags?.[0]}`, e);
     }
     return null;
   }
 
+  // 添加代理到配置中，并处理重名问题
   addProxyToConfig(proxy) {
       if (!proxy) return;
       this.config.outbounds = this.config.outbounds || [];
@@ -55,18 +60,20 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
       this.config.outbounds.push(proxy);
   }
 
+  // Xray 不支持复杂的代理组，这些方法为空
   addAutoSelectGroup() {}
   addNodeSelectGroup() {}
   addOutboundGroups() {}
   addCustomRuleGroups() {}
   addFallBackGroup() {}
 
+  // 格式化最终的 Xray 配置
   formatConfig() {
     const cfg = this.config;
     cfg.routing = cfg.routing || {};
     cfg.routing.rules = cfg.routing.rules || [];
 
-    // Country-based balancers (leastPing)
+    // 如果启用，则创建基于国家/地区的负载均衡器
     const outbounds = this.getProxies();
     const countryGroups = {};
     outbounds.forEach(o => {
@@ -89,7 +96,7 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
       if (balancers.length > 0) cfg.routing.balancers = balancers;
     }
 
-    // Rules from selected/custom rules → map to geosite/geoip
+    // 根据选择的规则生成路由规则
     const rules = generateRules(this.selectedRules, this.customRules);
     const defaultOutbound = (this.useBalancer || this.groupByCountry) ? 'auto_select' : (allTags[0] || 'DIRECT');
 
@@ -97,7 +104,6 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
       .forEach(r => {
         const domain = [];
         (r.domain_suffix || []).forEach(s => domain.push(`domain:${s}`));
-        // For site rules, use geosite
         (r.site_rules || []).forEach(s => { if (s) domain.push(`geosite:${s}`); });
         cfg.routing.rules.push({ type: 'field', ...(domain.length ? { domain } : {}), outboundTag: defaultOutbound });
       });
@@ -110,11 +116,11 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
       cfg.routing.rules.push({ type: 'field', ip, outboundTag: defaultOutbound });
     });
 
-    // Default: CN to DIRECT (common-sense)
+    // 添加默认规则，将中国大陆流量直连
     cfg.routing.rules.unshift({ type: 'field', domain: ['geosite:cn'], outboundTag: 'DIRECT' });
     cfg.routing.rules.unshift({ type: 'field', ip: ['geoip:cn'], outboundTag: 'DIRECT' });
 
-    // Final: auto_select
+    // 最终的回退规则
     cfg.routing.rules.push({ type: 'field', outboundTag: defaultOutbound });
 
     return cfg;

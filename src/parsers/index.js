@@ -7,8 +7,8 @@ import { TuicParser } from './TuicUrlParser.js';
 import { AnytlsParser } from './AnytlsParser.js';
 import { HttpParser } from './HttpParser.js';
 
-// This is our parser chain.
-// We will add more parsers here as we migrate them.
+// 解析器链
+// 按顺序尝试使用以下解析器
 const parsers = [
   new VmessParser(),
   new ShadowsocksParser(),
@@ -21,9 +21,10 @@ const parsers = [
 ];
 
 /**
- * Parses a given URL by trying a chain of registered parsers.
- * @param {string} url The URL or content to parse.
- * @returns {object|null} The parsed proxy object, or null if no parser can handle the input.
+ * 通过尝试已注册的解析器链来解析给定的 URL。
+ * @param {string} url 要解析的 URL 或内容。
+ * @param {string} userAgent - 用于网络请求的 User-Agent。
+ * @returns {Promise<object|null>} 解析后的代理对象，如果无法解析则返回 null。
  */
 export async function parse(url, userAgent) {
   if (typeof url !== 'string' || !url.trim()) {
@@ -32,20 +33,24 @@ export async function parse(url, userAgent) {
 
   const trimmedUrl = url.trim();
 
+  // 遍历解析器链
   for (const parser of parsers) {
     try {
+      // 检查当前解析器是否能处理该 URL
       if (parser.canParse(trimmedUrl)) {
         const res = parser.parse(trimmedUrl, userAgent);
-        // Support async parsers (e.g., HTTP)
+        // 支持异步解析器（例如，需要发起 HTTP 请求的解析器）
         const value = res instanceof Promise ? await res : res;
-        if (value != null) return value;
+        if (value != null) {
+          return value; // 解析成功，返回结果
+        }
       }
     } catch (e) {
-      console.warn('Parser failed:', parser?.constructor?.name, e?.message || e);
+      // 记录解析失败的警告，但继续尝试下一个解析器
+      console.warn('解析器失败:', parser?.constructor?.name, e?.message || e);
     }
   }
 
-  // If no parser in the chain can handle the URL, we return null.
-  // We will later integrate the remaining old parsers here as a fallback.
+  // 如果链中没有解析器可以处理该 URL，则返回 null。
   return null;
 }

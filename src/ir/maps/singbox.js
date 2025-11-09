@@ -1,6 +1,12 @@
-// Map Core IR to sing-box outbound object (scaffold)
+/**
+ * 将核心内部表示 (IR) 映射到 sing-box 出站对象。
+ * @param {object} ir - 内部表示 (IR) 对象。
+ * @param {object} [original] - 原始解析出的对象，用于备用。
+ * @returns {object|null} sing-box 出站对象，或在无法映射时返回 null。
+ */
 export function mapIRToSingbox(ir, original) {
   if (!ir) return null;
+  // 从 IR 中提取通用字段
   const auth = ir.auth || original?.auth || {};
   const transport = ir.transport || original?.transport;
   const tls = ir.tls || original?.tls;
@@ -12,7 +18,9 @@ export function mapIRToSingbox(ir, original) {
     server_port: ir.port,
   };
 
+  // 根据不同的协议类型进行映射
   if (ir.kind === 'anytls') {
+    // 将数值转换为 sing-box 的时长格式 (e.g., "10s")
     const toDuration = (v) => {
       if (v === undefined || v === null) return undefined;
       if (typeof v === 'number') return `${v}s`;
@@ -98,6 +106,6 @@ export function mapIRToSingbox(ir, original) {
     return out;
   }
 
-  // Let builder fallback for other kinds
+  // 如果此处未实现，则让构建器进行回退处理
   return null;
 }

@@ -2,6 +2,7 @@ import { UNIFIED_RULES, PREDEFINED_RULE_SETS } from './config.js';
 import { generateStyles } from './style.js';
 import { t } from './i18n/index.js';
 
+// 生成完整的HTML页面
 export function generateHtml(xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl) {
   return `
     <!DOCTYPE html>
@@ -12,6 +13,7 @@ export function generateHtml(xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl) {
   `;
 }
 
+// 生成HTML的<head>部分
 const generateHead = () => `
   <head>
     <meta charset="UTF-8">
@@ -32,6 +34,7 @@ const generateHead = () => `
   </head>
 `;
 
+// 生成HTML的<body>部分
 const generateBody = (xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl) => `
   <body>
     ${generateDarkModeToggle()}
@@ -51,25 +54,29 @@ const generateBody = (xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl) => `
   </body>
 `;
 
+// 生成暗黑模式切换按钮
 const generateDarkModeToggle = () => `
   <button id="darkModeToggle" class="btn btn-outline-secondary">
     <i class="fas fa-moon"></i>
   </button>
 `;
 
+// 生成GitHub项目链接
 const generateGithubLink = () => `
   <a href="https://github.com/7Sageer/sublink-worker" target="_blank" rel="noopener noreferrer" class="github-link">
     <i class="fab fa-github"></i>
   </a>
 `;
 
+// 生成卡片头部
 const generateCardHeader = () => `
   <div class="card-header text-center">
     <h1 class="display-4 mb-0">Sublink Worker</h1>
   </div>
 `;
 
-// Form Components
+// 表单组件
+// 生成主表单
 const generateForm = () => `
   <form method="POST" id="encodeForm">
     ${generateShareUrlsSection()}
@@ -79,6 +86,7 @@ const generateForm = () => `
   </form>
 `;
 
+// 生成分享链接输入区域
 const generateShareUrlsSection = () => `
   <div class="form-section">
     <div class="form-section-title">${t('shareUrls')}</div>
@@ -86,6 +94,7 @@ const generateShareUrlsSection = () => `
   </div>
 `;
 
+// 生成高级选项的切换开关
 const generateAdvancedOptionsToggle = () => `
   <div class="form-check form-switch mb-3">
     <input class="form-check-input" type="checkbox" id="advancedToggle">
@@ -93,6 +102,7 @@ const generateAdvancedOptionsToggle = () => `
   </div>
 `;
 
+// 生成高级选项区域
 const generateAdvancedOptions = () => `
   <div id="advancedOptions">
     ${generateRuleSetSelection()}
@@ -102,6 +112,7 @@ const generateAdvancedOptions = () => `
   </div>
 `;
 
+// 生成表单提交和清除按钮
 const generateButtonContainer = () => `
   <div class="button-container d-flex gap-2 mt-4">
     <button type="submit" class="btn btn-primary flex-grow-1">
@@ -113,6 +124,7 @@ const generateButtonContainer = () => `
   </div>
 `;
 
+// 生成订阅链接展示区域
 const generateSubscribeLinks = (xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl) => `
   <div class="mt-4">
     ${generateLinkInput('Xray Link (Base64):', 'xrayLink', xrayUrl)}
@@ -124,6 +136,7 @@ const generateSubscribeLinks = (xrayUrl, singboxUrl, clashUrl, surgeUrl, baseUrl
   </div>
 `;
 
+// 生成单个订阅链接输入框（包含复制和二维码按钮）
 const generateLinkInput = (label, id, value) => `
   <div class="mb-4">
     <label for="${id}" class="form-label">${label}</label>
@@ -140,6 +153,7 @@ const generateLinkInput = (label, id, value) => `
   </div>
 `;
 
+// 生成自定义短链接路径区域
 const generateCustomPathSection = (baseUrl) => `
   <div class="mb-4 mt-3">
     <label for="customShortCode" class="form-label">${t('customPath')}</label>
@@ -163,6 +177,7 @@ const generateCustomPathSection = (baseUrl) => `
   </div>
 `;
 
+// 生成“生成短链接”按钮
 const generateShortenButton = () => `
   <div class="d-grid mt-3">
     <button class="btn btn-primary btn-lg" type="button" onclick="shortenAllUrls()">
@@ -171,6 +186,7 @@ const generateShortenButton = () => `
   </div>
 `;
 
+// 注入所有页面内嵌脚本
 const generateScripts = () => `
   <script>
     ${copyToClipboardFunction()}
@@ -188,7 +204,9 @@ const generateScripts = () => `
   </script>
 `;
 
+// 自定义短链接路径相关功能的脚本
 const customPathFunctions = () => `
+  // 保存自定义路径到localStorage
   function saveCustomPath() {
     const customPath = document.getElementById('customShortCode').value;
     if (customPath) {
@@ -201,6 +219,7 @@ const customPathFunctions = () => `
     }
   }
 
+  // 从localStorage更新已保存路径的下拉菜单
   function updateSavedPathsDropdown() {
     const savedPaths = JSON.parse(localStorage.getItem('savedCustomPaths') || '[]');
     const dropdown = document.getElementById('savedCustomPaths');
@@ -213,6 +232,7 @@ const customPathFunctions = () => `
     });
   }
 
+  // 当从下拉菜单选择已保存的路径时，填充到输入框
   function loadSavedCustomPath() {
     const dropdown = document.getElementById('savedCustomPaths');
     const customShortCode = document.getElementById('customShortCode');
@@ -221,6 +241,7 @@ const customPathFunctions = () => `
     }
   }
 
+  // 删除选中的已保存路径
   function deleteSelectedPath() {
     const dropdown = document.getElementById('savedCustomPaths');
     const selectedPath = dropdown.value;
@@ -246,6 +267,7 @@ const customPathFunctions = () => `
   });
 `;
 
+// 高级选项显示/隐藏的切换逻辑
 const advancedOptionsToggleFunction = () => `
   document.getElementById('advancedToggle').addEventListener('change', function() {
     const advancedOptions = document.getElementById('advancedOptions');
@@ -257,6 +279,7 @@ const advancedOptionsToggleFunction = () => `
   });
 `;
 
+// “复制到剪贴板”功能的脚本
 const copyToClipboardFunction = () => `
   function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
@@ -276,9 +299,11 @@ const copyToClipboardFunction = () => `
   }
 `;
 
+// “生成短链接”功能的脚本
 const shortenAllUrlsFunction = () => `
   let isShortening = false;
 
+  // 调用后端API来缩短单个URL
   async function shortenUrl(url, customShortCode) {
     saveCustomPath();
     const response = await fetch(\`/shorten-v2?url=\${encodeURIComponent(url)}&shortCode=\${encodeURIComponent(customShortCode || '')}\`);
@@ -289,6 +314,7 @@ const shortenAllUrlsFunction = () => `
     throw new Error('Failed to shorten URL');
   }
 
+  // 缩短所有客户端的链接
   async function shortenAllUrls() {
     if (isShortening) {
       return;
@@ -330,6 +356,7 @@ const shortenAllUrlsFunction = () => `
   }
 `;
 
+// 暗黑模式切换功能的脚本
 const darkModeToggleFunction = () => `
   const darkModeToggle = document.getElementById('darkModeToggle');
   const body = document.body;
@@ -363,6 +390,7 @@ const darkModeToggleFunction = () => `
   observer.observe(body, { attributes: true });
 `;
 
+// 生成规则集选择区域
 const generateRuleSetSelection = () => `
   <div class="form-section">
     <div class="form-section-title d-flex align-items-center">
@@ -389,6 +417,7 @@ const generateRuleSetSelection = () => `
   </div>
 `;
 
+// 生成单个规则的复选框
 const generateRuleCheckbox = (rule) => `
   <div class="col-md-4 mb-2">
     <div class="form-check">
@@ -398,6 +427,7 @@ const generateRuleCheckbox = (rule) => `
   </div>
 `;
 
+// 生成自定义规则区域
 const generateCustomRulesSection = () => `
   <div class="mt-2">
     <div class="custom-rules-section-header">
@@ -416,6 +446,7 @@ const generateCustomRulesSection = () => `
   </div>
 `;
 
+// 生成自定义规则的Tab（表单/JSON）
 const generateCustomRulesTabs = () => `
   <div class="custom-rules-tabs">
     <button type="button" class="custom-rules-tab active" onclick="switchCustomRulesTab('form')" id="formTab">
@@ -427,6 +458,7 @@ const generateCustomRulesTabs = () => `
   </div>
 `;
 
+// 生成自定义规则的内容区域
 const generateCustomRulesContent = () => `
   <div class="custom-rules-content">
     ${generateFormView()}
@@ -434,6 +466,7 @@ const generateCustomRulesContent = () => `
   </div>
 `;
 
+// 生成自定义规则的表单视图
 const generateFormView = () => `
   <div id="formView" class="custom-rules-view active">
     <div class="conversion-controls">
@@ -454,6 +487,7 @@ const generateFormView = () => `
   </div>
 `;
 
+// 生成自定义规则的JSON视图
 const generateJSONView = () => `
   <div id="jsonView" class="custom-rules-view">
     <div class="conversion-controls">
@@ -474,6 +508,7 @@ const generateJSONView = () => `
   </div>
 `;
 
+// 生成“按国家分组”区域
 const generateGroupByCountrySection = () => `
   <div class="form-section">
     <div class="d-flex justify-content-between align-items-center py-2">
@@ -493,6 +528,7 @@ const generateGroupByCountrySection = () => `
   </div>
 `;
 
+// 生成基础配置设置区域
 const generateBaseConfigSection = () => `
   <div class="form-section">
     <div class="form-section-title d-flex align-items-center">
@@ -522,6 +558,7 @@ const generateBaseConfigSection = () => `
   </div>
 `;
 
+// 生成自定义User-Agent区域
 const generateUASection = () => `
   <div class="form-section">
     <div class="form-section-title d-flex align-items-center">
@@ -537,6 +574,7 @@ const generateUASection = () => `
   </div>
 `;
 
+// 应用预定义规则集的脚本
 const applyPredefinedRulesFunction = () => `
   function applyPredefinedRules() {
     const predefinedRules = document.getElementById('predefinedRules').value;
@@ -574,6 +612,7 @@ const applyPredefinedRulesFunction = () => `
   });
 `;
 
+// 初始化所有工具提示（Tooltip）的脚本
 const tooltipFunction = () => `
   function initTooltips() {
     const tooltips = document.querySelectorAll('.tooltip-icon');
@@ -596,6 +635,7 @@ const tooltipFunction = () => `
   document.addEventListener('DOMContentLoaded', initTooltips);
 `;
 
+// 表单提交处理逻辑
 const submitFormFunction = () => `
   function submitForm(event) {
     event.preventDefault();
@@ -656,6 +696,7 @@ const submitFormFunction = () => `
     subscribeLinksContainer.scrollIntoView({ behavior: 'smooth' });
   }
 
+  // 解析URL参数并填充到表单中
   function parseUrlAndFillForm(url) {
     try {
       const urlObj = new URL(url);
@@ -820,6 +861,7 @@ const submitFormFunction = () => `
     });
   });
 
+  // 从localStorage加载已保存的表单数据
   function loadSavedFormData() {
     const savedInput = localStorage.getItem('inputTextarea');
     if (savedInput) {
@@ -864,6 +906,7 @@ const submitFormFunction = () => `
     loadSelectedRules();
   }
 
+  // 保存当前选择的规则到localStorage
   function saveSelectedRules() {
     const selectedRules = Array.from(document.querySelectorAll('input[name="selectedRules"]:checked'))
       .map(checkbox => checkbox.value);
@@ -871,6 +914,7 @@ const submitFormFunction = () => `
     localStorage.setItem('predefinedRules', document.getElementById('predefinedRules').value);
   }
 
+  // 从localStorage加载已选择的规则
   function loadSelectedRules() {
     const savedRules = localStorage.getItem('selectedRules');
     if (savedRules) {
@@ -889,6 +933,7 @@ const submitFormFunction = () => `
     }
   }
 
+  // 清除表单数据和localStorage中的缓存
   function clearFormData() {
     localStorage.removeItem('inputTextarea');
     localStorage.removeItem('advancedToggle');
@@ -932,10 +977,12 @@ const submitFormFunction = () => `
   });
 `;
 
+// 自定义规则相关的所有功能的脚本
 const customRuleFunctions = () => `
   let customRuleCount = 0;
   let currentTab = 'form';
 
+  // 切换自定义规则的Tab（表单/JSON）
   function switchCustomRulesTab(tab) {
     try {
       currentTab = tab;
@@ -964,11 +1011,13 @@ const customRuleFunctions = () => `
     }
   }
 
+  // 更新“无规则”的提示信息是否显示
   function updateEmptyMessages() {
     const hasFormRules = document.querySelectorAll('.custom-rule').length > 0;
     document.getElementById('emptyFormMessage').style.display = hasFormRules ? 'none' : 'block';
   }
 
+  // 动态添加一个新的自定义规则表单
   function addCustomRule() {
     const customRulesDiv = document.getElementById('customRules');
     const newRuleDiv = document.createElement('div');
@@ -1043,6 +1092,7 @@ const customRuleFunctions = () => `
     }
   }
 
+  // 清空所有自定义规则
   function clearAllCustomRules() {
     if (confirm('${t('confirmClearAllRules')}')) {
       document.querySelectorAll('.custom-rule').forEach(rule => rule.remove());
@@ -1074,6 +1124,7 @@ const customRuleFunctions = () => `
     }
   }
 
+  // 将表单视图中的规则转换为JSON格式
   function convertFormToJSON() {
     const formRules = [];
     document.querySelectorAll('.custom-rule').forEach(rule => {
@@ -1101,6 +1152,7 @@ const customRuleFunctions = () => `
     }
   }
 
+  // 将JSON视图中的规则转换为表单格式
   function convertJSONToForm() {
     const jsonTextarea = document.querySelector('#customRulesJSON textarea');
     if (!jsonTextarea || !jsonTextarea.value.trim()) {
@@ -1176,6 +1228,7 @@ const customRuleFunctions = () => `
     updateEmptyMessages();
   }
 
+  // 实时验证JSON文本框内容的合法性
   function validateJSONRealtime(textarea) {
     const messageDiv = textarea.parentNode.querySelector('.json-validation-message');
     const jsonText = textarea.value.trim();
@@ -1233,10 +1286,11 @@ const customRuleFunctions = () => `
     }
   }
 
+  // 解析所有自定义规则（包括表单和JSON）并返回一个统一的数组
   function parseCustomRules() {
     const customRules = [];
 
-    // Process ordinary form rules
+    // 处理表单视图中的规则
     document.querySelectorAll('.custom-rule').forEach(rule => {
       const ruleData = {
         name: rule.querySelector('input[name="customRuleName[]"]').value || '',
@@ -1321,6 +1375,7 @@ const customRuleFunctions = () => `
   }
 `;
 
+// 生成二维码功能的脚本
 const generateQRCodeFunction = () => `
   function generateQRCode(id) {
     const input = document.getElementById(id);
@@ -1383,6 +1438,7 @@ const generateQRCodeFunction = () => `
   }
 `;
 
+// 保存基础配置到后端的脚本
 const saveConfig = () => `
   function saveConfig() {
     const configEditor = document.getElementById('configEditor');
@@ -1420,6 +1476,7 @@ const saveConfig = () => `
   }
 `;
 
+// 清除基础配置的脚本
 const clearConfig = () => `
   function clearConfig() {
     document.getElementById('configEditor').value = '';

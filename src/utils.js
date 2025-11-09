@@ -1,6 +1,7 @@
+// 定义生成的随机路径的默认长度
 const PATH_LENGTH = 7;
 
-// 自定义的字符串前缀检查函数
+// 检查字符串是否以指定的前缀开头
 export function checkStartsWith(str, prefix) {
   if (str === undefined || str === null || prefix === undefined || prefix === null) {
     return false;
@@ -11,12 +12,12 @@ export function checkStartsWith(str, prefix) {
 }
 
 
-// Base64 编码函数 (使用原生 btoa)
+// 使用原生 btoa 函数进行 Base64 编码，支持 UTF-8
 export function encodeBase64(input) {
-	// 将字符串通过 TextEncoder 转为 UTF-8 编码的字节，分块拼接以避免调用栈溢出
+	// 将字符串通过 TextEncoder 转为 UTF-8 编码的字节
 	const utf8Bytes = new TextEncoder().encode(input);
 	let binaryString = '';
-	const chunkSize = 0x8000;
+	const chunkSize = 0x8000; // 分块处理以避免调用栈溢出
 	for (let i = 0; i < utf8Bytes.length; i += chunkSize) {
 		const chunk = utf8Bytes.subarray(i, i + chunkSize);
 		binaryString += String.fromCharCode(...chunk);
@@ -24,7 +25,7 @@ export function encodeBase64(input) {
 	return btoa(binaryString);
 }
 
-// Base64 解码函数 (使用原生 atob)
+// 使用原生 atob 函数进行 Base64 解码，支持 UTF-8
 export function decodeBase64(input) {
 	try {
 		const binaryString = atob(input);
@@ -33,32 +34,33 @@ export function decodeBase64(input) {
 		// 使用 TextDecoder 将 UTF-8 字节解码回字符串
 		return new TextDecoder().decode(bytes);
 	} catch (e) {
-		// 如果 atob 失败 (例如，无效的 base64 字符串), 返回原始输入或根据需要处理错误
-		console.error("Base64 decoding failed:", e);
+		// 如果 atob 失败 (例如，无效的 base64 字符串), 记录错误并返回原始输入
+		console.error("Base64 解码失败:", e);
 		return input;
 	}
 }
 
-// 兼容旧代码的存根，稍后将被完全移除
+// 兼容旧代码的存根，将 Base64 字符串转为二进制字符串
 export function base64ToBinary(base64String) {
 	try {
 		return atob(base64String);
 	} catch (e) {
-		console.error("base64ToBinary failed:", e);
+		console.error("base64ToBinary 失败:", e);
 		return "";
 	}
 }
 
-// 兼容旧代码的存根，稍后将被完全移除
+// 兼容旧代码的存根，将二进制字符串转为 Base64 字符串
 export function base64FromBinary(binaryString) {
 	try {
 		return btoa(binaryString);
 	} catch (e) {
-		console.error("base64FromBinary failed:", e);
+		console.error("base64FromBinary 失败:", e);
 		return "";
 	}
 }
 
+// 尝试解码订阅内容，支持普通文本、Base64 编码和 URI 编码
 export function tryDecodeSubscriptionLines(input, { decodeUriComponent = false } = {}) {
 	if (typeof input !== 'string') {
 		return input;
@@ -69,6 +71,7 @@ export function tryDecodeSubscriptionLines(input, { decodeUriComponent = false }
 		return trimmed;
 	}
 
+	// 如果内容包含多行，则按行分割
 	const splitIfMultiple = (value) => {
 		if (typeof value !== 'string') {
 			return value;
@@ -87,6 +90,7 @@ export function tryDecodeSubscriptionLines(input, { decodeUriComponent = false }
 		return normalized.trim();
 	};
 
+	// 直接处理，看是否是多行链接
 	const directResult = splitIfMultiple(trimmed);
 	if (Array.isArray(directResult)) {
 		return directResult;
@@ -95,15 +99,17 @@ export function tryDecodeSubscriptionLines(input, { decodeUriComponent = false }
 		return directResult;
 	}
 
+	// 尝试 Base64 解码
 	try {
 		let decoded = decodeBase64(trimmed);
+		// 如果需要，进行 URI 解码
 		if (decodeUriComponent && decoded.includes('%')) {
 			const hasProtocolScheme = decoded.includes('://');
 			if (!hasProtocolScheme) {
 				try {
 					decoded = decodeURIComponent(decoded);
 				} catch (_) {
-					// ignore URI decode errors and fall back to the decoded string
+					// 忽略 URI 解码错误
 				}
 			}
 		}
@@ -116,11 +122,12 @@ export function tryDecodeSubscriptionLines(input, { decodeUriComponent = false }
 			return decodedResult;
 		}
 	} catch (_) {
-		// ignore decoding errors and return the original trimmed input
+		// 忽略解码错误
 	}
 
 	return trimmed;
 }
+// 深拷贝一个对象
 export function DeepCopy(obj) {
 	if (obj === null || typeof obj !== 'object') {
 		return obj;
@@ -137,6 +144,7 @@ export function DeepCopy(obj) {
 	return newObj;
 }
 
+// 生成指定长度的随机字符串，用于 Web 路径
 export function GenerateWebPath(length = PATH_LENGTH) {
 	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 	let result = ''
@@ -147,7 +155,7 @@ export function GenerateWebPath(length = PATH_LENGTH) {
 }
 
 
-// Parse boolean value from various formats
+// 从各种格式解析布尔值
 export function parseBool(value, fallback = undefined) {
 	if (value === undefined || value === null) return fallback;
 	if (typeof value === 'boolean') return value;
@@ -157,14 +165,14 @@ export function parseBool(value, fallback = undefined) {
 	return fallback;
 }
 
-// Parse number value safely
+// 安全地解析数值
 export function parseMaybeNumber(value) {
 	if (value === undefined || value === null) return undefined;
 	const num = Number(value);
 	return Number.isNaN(num) ? undefined : num;
 }
 
-// Parse comma-separated string to array
+// 将逗号分隔的字符串解析为数组
 export function parseArray(value) {
 	if (!value) return undefined;
 	if (Array.isArray(value)) return value;
@@ -174,6 +182,7 @@ export function parseArray(value) {
 		.filter(entry => entry.length > 0);
 }
 
+// 从节点名称中解析国家/地区信息
 export function parseCountryFromNodeName(nodeName) {
         const countryData = {
             'HK': { name: 'Hong Kong', emoji: '🇭🇰', aliases: ['香港', 'Hong Kong', 'HK'] },
@@ -208,12 +217,14 @@ export function parseCountryFromNodeName(nodeName) {
 		'AE': { name: 'United Arab Emirates', emoji: '🇦🇪', aliases: ['阿联酋', 'United Arab Emirates'] },
 	};
 
+	// 创建一个包含所有别名的正则表达式
 	const allAliases = Object.values(countryData).flatMap(c => c.aliases);
 	const regex = new RegExp(allAliases.map(p => p.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|'), 'i');
 	const match = nodeName.match(regex);
 
 	if (match) {
 		const matchedAlias = match[0];
+		// 查找匹配别名对应的国家/地区信息
 		for (const code in countryData) {
 			if (countryData[code].aliases.some(alias => alias.toLowerCase() === matchedAlias.toLowerCase())) {
 				return { code, ...countryData[code] };

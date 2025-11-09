@@ -9,17 +9,24 @@ import {
    createHttpNode
  } from '../ir/factory.js';
  
+ /**
+  * 将从 YAML 配置中解析出的代理对象转换为内部表示（IR）对象。
+  * @param {object} p - 从 YAML 解析的原始代理对象。
+  * @returns {object|null} 转换后的 IR 节点对象，如果无法转换则返回 null。
+  */
  export function convertYamlProxyToObject(p) {
    if (!p || typeof p !== 'object' || !p.type) return null;
    const type = String(p.type).toLowerCase();
    const name = p.name || p.tag || 'proxy';
    const tags = name ? [name] : [];
  
+   // 辅助函数：确保值是数组
    const toArray = (value) => {
      if (value === undefined || value === null) return undefined;
      return Array.isArray(value) ? value : [value];
    };
  
+   // 辅助函数：从 YAML 对象中提取传输配置
    const getTransport = () => {
      const net = p.network || p['network-type'];
      if (net === 'ws') {
@@ -41,39 +48,41 @@ import {
      return undefined;
    };
  
-  const getTls = () => {
-    const hasTls =
-      p.tls ||
-      p.security === 'tls' ||
-      p.security === 'reality' ||
-      p['reality-opts'] ||
-      p['client-fingerprint'];
-    if (!hasTls) return undefined;
-    const reality = p['reality-opts'];
-    const tls = {
-      enabled: true,
-      sni: p.servername || p.sni || p.server,
-      server_name: p.servername || p.sni || p.server,
-      insecure: !!p['skip-cert-verify'],
-      alpn: toArray(p.alpn),
-    };
-    if (reality) {
-      tls.reality = {
-        enabled: true,
-        publicKey: reality['public-key'],
-        public_key: reality['public-key'],
-        shortId: reality['short-id'],
-        short_id: reality['short-id'],
-      };
-    }
-    if (p['client-fingerprint']) {
-      tls.utls = {
-        fingerprint: p['client-fingerprint'],
-      };
-    }
-    return tls;
-  };
+   // 辅助函数：从 YAML 对象中提取 TLS 配置
+   const getTls = () => {
+     const hasTls =
+       p.tls ||
+       p.security === 'tls' ||
+       p.security === 'reality' ||
+       p['reality-opts'] ||
+       p['client-fingerprint'];
+     if (!hasTls) return undefined;
+     const reality = p['reality-opts'];
+     const tls = {
+       enabled: true,
+       sni: p.servername || p.sni || p.server,
+       server_name: p.servername || p.sni || p.server,
+       insecure: !!p['skip-cert-verify'],
+       alpn: toArray(p.alpn),
+     };
+     if (reality) {
+       tls.reality = {
+         enabled: true,
+         publicKey: reality['public-key'],
+         public_key: reality['public-key'],
+         shortId: reality['short-id'],
+         short_id: reality['short-id'],
+       };
+     }
+     if (p['client-fingerprint']) {
+       tls.utls = {
+         fingerprint: p['client-fingerprint'],
+       };
+     }
+     return tls;
+   };
  
+   // 所有协议通用的属性
    const common = {
      host: p.server,
      port: p.port,
@@ -84,6 +93,7 @@ import {
      tls: getTls(),
    };
  
+   // 根据代理类型创建不同的 IR 节点
    switch (type) {
      case 'ss':
      case 'shadowsocks':
@@ -99,84 +109,84 @@ import {
          alter_id: p.alterId,
          security: p.cipher || p.security || 'auto',
        });
-    case 'vless':
-      return createVlessNode({
-        ...common,
-        uuid: p.uuid,
-        flow: p.flow,
-        packet_encoding: p['packet-encoding'],
-      });
+     case 'vless':
+       return createVlessNode({
+         ...common,
+         uuid: p.uuid,
+         flow: p.flow,
+         packet_encoding: p['packet-encoding'],
+       });
      case 'trojan':
        return createTrojanNode({
          ...common,
          password: p.password,
          flow: p.flow,
        });
-    case 'hysteria2':
-    case 'hysteria':
-    case 'hy2': {
-      const obfs = p.obfs ? { type: p.obfs, password: p['obfs-password'] } : undefined;
-      const hopInterval = typeof p['hop-interval'] !== 'undefined' ? Number(p['hop-interval']) : undefined;
-      const tls = {
-        enabled: true,
-        sni: p.sni || p.server,
-        server_name: p.sni || p.server,
-        insecure: !!p['skip-cert-verify'],
-        alpn: toArray(p.alpn),
-      };
-      return createHysteria2Node({
-        ...common,
-        password: p.password,
-        tls,
-        obfs,
-        auth: p.auth,
-        up: p.up,
-        down: p.down,
-        recv_window_conn: p['recv-window-conn'],
-        ports: p.ports,
-        hop_interval: hopInterval,
-        fast_open: typeof p['fast-open'] !== 'undefined' ? !!p['fast-open'] : undefined,
-        alpn: toArray(p.alpn),
-      });
-    }
-    case 'tuic':
-      return createTuicNode({
-        ...common,
-        tls: {
-          enabled: true,
-          sni: p.sni || p.server,
-          server_name: p.sni || p.server,
-          insecure: !!p['skip-cert-verify'],
-          alpn: toArray(p.alpn),
-        },
-        uuid: p.uuid,
-        password: p.password,
-        congestion_control: p['congestion-controller'] || p.congestion_control,
-        udp_relay_mode: p['udp-relay-mode'],
-        zero_rtt: p['zero-rtt'],
-         reduce_rtt: p['reduce-rtt'],
-         fast_open: p['fast-open'],
-         disable_sni: p['disable-sni'],
+     case 'hysteria2':
+     case 'hysteria':
+     case 'hy2': {
+       const obfs = p.obfs ? { type: p.obfs, password: p['obfs-password'] } : undefined;
+       const hopInterval = typeof p['hop-interval'] !== 'undefined' ? Number(p['hop-interval']) : undefined;
+       const tls = {
+         enabled: true,
+         sni: p.sni || p.server,
+         server_name: p.sni || p.server,
+         insecure: !!p['skip-cert-verify'],
+         alpn: toArray(p.alpn),
+       };
+       return createHysteria2Node({
+         ...common,
+         password: p.password,
+         tls,
+         obfs,
+         auth: p.auth,
+         up: p.up,
+         down: p.down,
+         recv_window_conn: p['recv-window-conn'],
+         ports: p.ports,
+         hop_interval: hopInterval,
+         fast_open: typeof p['fast-open'] !== 'undefined' ? !!p['fast-open'] : undefined,
+         alpn: toArray(p.alpn),
        });
-    case 'anytls':
-      return createAnytlsNode({
-        ...common,
-        tls: {
-          enabled: true,
-          sni: p.sni || p.server,
-          server_name: p.sni || p.server,
-          insecure: !!p['skip-cert-verify'],
-          alpn: toArray(p.alpn),
-          utls: p['client-fingerprint'] ? { fingerprint: p['client-fingerprint'] } : undefined,
-        },
-        password: p.password,
-        'idle-session-check-interval': p['idle-session-check-interval'],
-        'idle-session-timeout': p['idle-session-timeout'],
-        'min-idle-session': p['min-idle-session'],
-        idle_session_check_interval: p['idle-session-check-interval'],
-        idle_session_timeout: p['idle-session-timeout'],
-        min_idle_session: p['min-idle-session'],
-      });
+     }
+     case 'tuic':
+       return createTuicNode({
+         ...common,
+         tls: {
+           enabled: true,
+           sni: p.sni || p.server,
+           server_name: p.sni || p.server,
+           insecure: !!p['skip-cert-verify'],
+           alpn: toArray(p.alpn),
+         },
+         uuid: p.uuid,
+         password: p.password,
+         congestion_control: p['congestion-controller'] || p.congestion_control,
+         udp_relay_mode: p['udp-relay-mode'],
+         zero_rtt: p['zero-rtt'],
+          reduce_rtt: p['reduce-rtt'],
+          fast_open: p['fast-open'],
+          disable_sni: p['disable-sni'],
+        });
+     case 'anytls':
+       return createAnytlsNode({
+         ...common,
+         tls: {
+           enabled: true,
+           sni: p.sni || p.server,
+           server_name: p.sni || p.server,
+           insecure: !!p['skip-cert-verify'],
+           alpn: toArray(p.alpn),
+           utls: p['client-fingerprint'] ? { fingerprint: p['client-fingerprint'] } : undefined,
+         },
+         password: p.password,
+         'idle-session-check-interval': p['idle-session-check-interval'],
+         'idle-session-timeout': p['idle-session-timeout'],
+         'min-idle-session': p['min-idle-session'],
+         idle_session_check_interval: p['idle-session-check-interval'],
+         idle_session_timeout: p['idle-session-timeout'],
+         min_idle_session: p['min-idle-session'],
+       });
      case 'http':
      case 'https':
        return createHttpNode({

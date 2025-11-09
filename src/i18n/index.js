@@ -432,11 +432,11 @@ const translations = {
   }
 };
 
-// 当前语言
+// 当前语言, 默认为简体中文
 let currentLang = 'zh-CN';
 
 
-// 设置语言
+// 设置当前语言
 export function setLanguage(lang) {
   if(translations[lang]) {
     currentLang = lang;
@@ -470,17 +470,17 @@ export function t(key) {
   return value;
 }
 
-// 获取当前语言
+// 获取当前设置的语言
 export function getCurrentLang() {
   return currentLang;
 }
 
-// 获取默认规则列表
+// 根据当前语言获取默认规则列表
 export function getDefaultRules() {
   return translations[currentLang].defaultRules;
 }
 
-// 获取出站集
+// 根据当前语言获取所有出站名称的翻译
 export function getOutbounds(){
   return translations[currentLang].outboundNames;
 }
