@@ -1,4 +1,4 @@
-import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from '../utils.js';
+import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig, parseArray } from '../utils.js';
 
 export class VlessParser {
   canParse(url) {
@@ -29,8 +29,8 @@ export class VlessParser {
       tls,
       transport,
       network: 'tcp',
-      flow: params.flow ?? undefined
+      flow: params.flow ?? undefined,
+      alpn: parseArray(params.alpn)
     };
   }
 }
-

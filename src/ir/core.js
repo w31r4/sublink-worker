@@ -27,6 +27,9 @@ export function downgradeByCaps(ir, target) {
   if (!caps.reality && out.tls && out.tls.reality) {
     delete out.tls.reality;
   }
+  // Drop utls fingerprint if target doesn't support utls
+  if (!caps.utls && out.tls && out.tls.utls) {
+    delete out.tls.utls;
+  }
   return out;
 }
-

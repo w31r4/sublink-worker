@@ -62,7 +62,7 @@ export function mapIRToClash(ir, original) {
       uuid: original?.uuid || ir.auth?.uuid,
       cipher: original?.security,
       tls: original?.tls?.enabled || !!ir.tls,
-      'client-fingerprint': ir.tls?.utls?.fingerprint,
+      ...(ir.tls?.utls?.fingerprint ? { 'client-fingerprint': ir.tls.utls.fingerprint } : {}),
       servername: ir.tls?.sni || original?.tls?.server_name || '',
       network: original?.transport?.type || original?.network || 'tcp',
       tfo: original?.tcp_fast_open,
@@ -88,10 +88,10 @@ export function mapIRToClash(ir, original) {
     } else if (original?.transport?.type === 'h2') {
       out['h2-opts'] = { path: original.transport.path, host: original.transport.host };
     }
-    if (original?.tls?.reality?.enabled) {
+    if (ir.tls?.reality) {
       out['reality-opts'] = {
-        'public-key': original.tls.reality.public_key,
-        'short-id': original.tls.reality.short_id,
+        'public-key': ir.tls.reality.publicKey || ir.tls.reality.public_key,
+        'short-id': ir.tls.reality.shortId || ir.tls.reality.short_id,
       };
     }
     return out;
@@ -157,7 +157,7 @@ export function mapIRToClash(ir, original) {
       password: original?.password || ir.auth?.password,
       cipher: original?.security,
       tls: original?.tls?.enabled || !!ir.tls,
-      'client-fingerprint': ir.tls?.utls?.fingerprint,
+      ...(ir.tls?.utls?.fingerprint ? { 'client-fingerprint': ir.tls.utls.fingerprint } : {}),
       sni: ir.tls?.sni || original?.tls?.server_name || '',
       network: original?.transport?.type || original?.network || 'tcp',
       tfo: original?.tcp_fast_open,
@@ -170,10 +170,10 @@ export function mapIRToClash(ir, original) {
     } else if (original?.transport?.type === 'grpc') {
       out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
     }
-    if (original?.tls?.reality?.enabled) {
+    if (ir.tls?.reality) {
       out['reality-opts'] = {
-        'public-key': original.tls.reality.public_key,
-        'short-id': original.tls.reality.short_id,
+        'public-key': ir.tls.reality.publicKey || ir.tls.reality.public_key,
+        'short-id': ir.tls.reality.shortId || ir.tls.reality.short_id,
       };
     }
     return out;

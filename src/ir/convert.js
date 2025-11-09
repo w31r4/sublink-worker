@@ -21,7 +21,7 @@ export function toIR(proxy) {
   if (proxy.tls) {
     ir.tls = {
       sni: proxy.tls.server_name,
-      alpn: proxy.tls.alpn,
+      alpn: typeof proxy.tls.alpn !== 'undefined' ? proxy.tls.alpn : proxy.alpn,
     };
     if (proxy.tls.reality) {
       ir.tls.reality = {

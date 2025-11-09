@@ -376,11 +376,15 @@ async function runGolden(g) {
             builder = new ClashConfigBuilder(input, 'minimal', [], undefined, 'zh-CN', 'test-agent', false);
         } else if (g.target === 'singbox') {
             builder = new SingboxConfigBuilder(input, 'minimal', [], undefined, 'zh-CN', 'test-agent', false);
+        } else if (g.target === 'xray') {
+            const { XrayConfigBuilder } = await import(pathToFileURL(path.join(projectRoot, 'src', 'XrayConfigBuilder.js')).href);
+            builder = new XrayConfigBuilder(input, 'minimal', [], undefined, 'zh-CN', 'test-agent', false);
         } else {
             console.log(`未知目标: ${g.target}`);
             return false;
         }
         const built = await builder.build();
+        const getByPath = (obj, path) => String(path).split('.').reduce((acc, k) => (acc ? acc[k] : undefined), obj);
         if (g.target === 'clash') {
             const obj = yaml.load(built);
             const exp = g.expects || {};
@@ -392,9 +396,19 @@ async function runGolden(g) {
                     return false;
                 }
                 for (const [k, v] of Object.entries(exp.proxyByName.fields || {})) {
-                    if (JSON.stringify(p[k]) !== JSON.stringify(v)) {
+                    const val = getByPath(p, k);
+                    if (JSON.stringify(val) !== JSON.stringify(v)) {
                         console.log(`❌ 字段不匹配 [${k}] 预期 ${JSON.stringify(v)} 实际 ${JSON.stringify(p[k])}`);
                         return false;
+                    }
+                }
+                if (Array.isArray(exp.proxyByName.absent)) {
+                    for (const k of exp.proxyByName.absent) {
+                        const val = getByPath(p, k);
+                        if (typeof val !== 'undefined') {
+                            console.log(`❌ 字段不应存在 [${k}] 实际 ${JSON.stringify(val)}`);
+                            return false;
+                        }
                     }
                 }
             }
@@ -408,10 +422,45 @@ async function runGolden(g) {
                     return false;
                 }
                 for (const [k, v] of Object.entries(exp.outboundByTag.fields || {})) {
-                    if (JSON.stringify(o[k]) !== JSON.stringify(v)) {
+                    const val = getByPath(o, k);
+                    if (JSON.stringify(val) !== JSON.stringify(v)) {
                         console.log(`❌ 字段不匹配 [${k}] 预期 ${JSON.stringify(v)} 实际 ${JSON.stringify(o[k])}`);
                         return false;
                     }
+                }
+                if (Array.isArray(exp.outboundByTag.absent)) {
+                    for (const k of exp.outboundByTag.absent) {
+                        const val = getByPath(o, k);
+                        if (typeof val !== 'undefined') {
+                            console.log(`❌ 字段不应存在 [${k}] 实际 ${JSON.stringify(val)}`);
+                            return false;
+                        }
+                    }
+                }
+            }
+        } else if (g.target === 'xray') {
+            const exp = g.expects || {};
+            if (exp.outboundByTag) {
+                const tag = exp.outboundByTag.tag;
+                const o = (built.outbounds || []).find(x => x && x.tag === tag);
+                if (!o) {
+                    console.log(`❌ 未找到 Xray 出站: ${tag}`);
+                    return false;
+                }
+                for (const [k, v] of Object.entries(exp.outboundByTag.fields || {})) {
+                    const val = getByPath(o, k);
+                    if (JSON.stringify(val) !== JSON.stringify(v)) {
+                        console.log(`❌ 字段不匹配 [${k}] 预期 ${JSON.stringify(v)} 实际 ${JSON.stringify(o[k])}`);
+                        return false;
+                    }
+                }
+            }
+            if (exp.outboundAbsentTag) {
+                const tag = exp.outboundAbsentTag;
+                const o = (built.outbounds || []).find(x => x && x.tag === tag);
+                if (o) {
+                    console.log(`❌ 不期望的 Xray 出站存在: ${tag}`);
+                    return false;
                 }
             }
         }
