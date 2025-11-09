@@ -2,6 +2,9 @@ import yaml from 'js-yaml';
 import { CLASH_CONFIG, generateRules, generateClashRuleSets, getOutbounds, PREDEFINED_RULE_SETS } from './config.js';
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { DeepCopy, parseCountryFromNodeName } from './utils.js';
+import { toIR } from './ir/convert.js';
+import { mapIRToClash } from './ir/maps/clash.js';
+import { downgradeByCaps } from './ir/core.js';
 import { t } from './i18n/index.js';
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
@@ -25,6 +28,13 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
     }
 
     convertProxy(proxy) {
+        // Prefer IR-based mapping for selected protocols to lower coupling
+        try {
+            const ir = toIR(proxy);
+            const mapped = mapIRToClash(downgradeByCaps(ir, 'clash'), proxy);
+            if (mapped) return mapped;
+        } catch (_) {}
+
         switch(proxy.type) {
             case 'shadowsocks':
                 return {

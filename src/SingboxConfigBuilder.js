@@ -1,6 +1,9 @@
 import { SING_BOX_CONFIG, generateRuleSets, generateRules, getOutbounds, PREDEFINED_RULE_SETS} from './config.js';
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { DeepCopy, parseCountryFromNodeName } from './utils.js';
+import { toIR } from './ir/convert.js';
+import { mapIRToSingbox } from './ir/maps/singbox.js';
+import { downgradeByCaps } from './ir/core.js';
 import { t } from './i18n/index.js';
 
 export class SingboxConfigBuilder extends BaseConfigBuilder {
@@ -27,6 +30,11 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     convertProxy(proxy) {
+        try {
+            const ir = toIR(proxy);
+            const mapped = mapIRToSingbox(downgradeByCaps(ir, 'singbox'), proxy);
+            if (mapped) return mapped;
+        } catch (_) {}
         return proxy;
     }
 
