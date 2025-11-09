@@ -160,6 +160,7 @@ async function handleRequest(request) {
       let selectedRules = url.searchParams.get('selectedRules');
       let customRules = url.searchParams.get('customRules');
       const groupByCountry = url.searchParams.get('group_by_country') === 'true';
+      const useBalancer = url.searchParams.get('use_balancer') === 'true';
       let lang = url.searchParams.get('lang') || 'zh-CN';
       let userAgent = url.searchParams.get('ua') || 'curl/7.74.0';
       if (!inputString) return new Response(t('missingConfig'), { status: 400 });
@@ -169,7 +170,7 @@ async function handleRequest(request) {
         try { selectedRules = JSON.parse(decodeURIComponent(selectedRules)); } catch { selectedRules = PREDEFINED_RULE_SETS.minimal; }
       }
       try { customRules = JSON.parse(decodeURIComponent(customRules)); } catch { customRules = []; }
-      const builder = new XrayConfigBuilder(inputString, selectedRules, customRules, undefined, lang, userAgent, groupByCountry);
+      const builder = new XrayConfigBuilder(inputString, selectedRules, customRules, undefined, lang, userAgent, groupByCountry, { useBalancer });
       const cfg = await builder.build();
       return new Response(JSON.stringify(cfg, null, 2), { headers: { 'content-type': 'application/json; charset=utf-8' } });
     } else if (url.pathname.startsWith('/xray')) {

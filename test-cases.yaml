@@ -1,18 +1,18 @@
 tests:
-  - name: 原始 YAML 配置测试
-    description: 验证 GitHub Gist 示例中的 Clash YAML 是否被正确解析
+  - name: 泛用 YAML 配置解析（HY2/TUIC/VLESS）
+    description: 使用通用占位与 example 域名，验证三协议关键字段与映射是否正确
     input: |
       proxies:
         - name: HY2-main
           type: hysteria2
-          server: hajimi.com
+          server: hy.example.com
           port: 443
           ports: 20000-20100
           hop-interval: 15
           up: "200 Mbps"
           down: "200 Mbps"
           password: REPLACE_HY2_PASS
-          sni: hajimi.com
+          sni: hy.example.com
           obfs: salamander
           obfs-password: REPLACE_OBFS_PASS
           alpn:
@@ -22,11 +22,11 @@ tests:
 
         - name: TUIC-main
           type: tuic
-          server: hajimi.com
+          server: tuic.example.com
           port: 444
           uuid: REPLACE_TUIC_UUID
           password: REPLACE_TUIC_PASS
-          sni: hajimi.com
+          sni: tuic.example.com
           alpn:
             - h3
           reduce-rtt: true
@@ -38,7 +38,7 @@ tests:
 
         - name: VLESS-REALITY
           type: vless
-          server: hajimi.com
+          server: vless.example.com
           port: 445
           uuid: REPLACE_VLESS_UUID
           udp: true
@@ -64,6 +64,41 @@ tests:
         hysteria2: 1
         tuic: 1
         vless: 1
+      proxyDetails:
+        - tag: HY2-main
+          fields:
+            type: hysteria2
+            server: hy.example.com
+            server_port: 443
+            tls.server_name: hy.example.com
+            tls.insecure: false
+            alpn.0: h3
+            hop_interval: 15
+        - tag: TUIC-main
+          fields:
+            type: tuic
+            server: tuic.example.com
+            server_port: 444
+            congestion_control: bbr
+            udp_relay_mode: native
+            tls.server_name: tuic.example.com
+            tls.insecure: false
+            tls.alpn.0: h3
+            zero_rtt: false
+            reduce_rtt: true
+        - tag: VLESS-REALITY
+          fields:
+            type: vless
+            server: vless.example.com
+            server_port: 445
+            flow: xtls-rprx-vision
+            packet_encoding: xudp
+            tls.reality.enabled: true
+            tls.reality.public_key: REPLACE_PUBLIC_KEY
+            tls.reality.short_id: a1b2c3
+            tls.utls.fingerprint: chrome
+            alpn.0: h2
+            alpn.1: http/1.1
 
   - name: 空代理列表
     description: proxies 数组为空时不应返回任何节点

@@ -1,4 +1,4 @@
-# 本地测试指南
+# 本地测试与用法指南
 
 ## 🚀 快速开始
 
@@ -46,3 +46,27 @@ node test-local.js
 ---
 
 **准备好测试了吗？** 运行 `node test-local.js` 来验证您的 YAML 解析功能！
+
+## 🌐 在线接口用法（参数化规则）
+
+- 目标：Clash、SingBox、Surge、Xray（/xray-config）
+- 规则选择：`selectedRules` 可使用预置名（minimal/balanced/comprehensive）或传入 URL 编码的 JSON；`customRules` 传 URL 编码后的 JSON。
+- 公共参数：
+  - `lang`（默认 zh-CN）
+  - `ua` 自定义 User-Agent（默认 curl/7.74.0）
+  - `group_by_country=true|false`（默认 false）：启用按国家分组/聚合（Clash/SingBox/Xray 支持）
+- Xray 专属：
+  - `use_balancer=true|false`（默认 false）：是否启用 balancer（auto_select/country_*）自动选择；与 `group_by_country` 配合可实现按国家聚合
+
+### 示例
+
+- Clash（预置 minimal 规则集）：
+  - `/clash?config=<ENCODED_SUB>&selectedRules=minimal&customRules=%5B%5D`
+- SingBox（自定义 JSON 规则）：
+  - `/singbox?config=<ENCODED_SUB>&selectedRules=%7B...%7D&customRules=%5B...%5D`
+- Xray（开启 balancer）：
+  - `/xray-config?config=<ENCODED_SUB>&selectedRules=minimal&customRules=%5B%5D&use_balancer=true`
+- Xray（按国家分组）：
+  - `/xray-config?config=<ENCODED_SUB>&selectedRules=balanced&group_by_country=true`
+- Xray（关闭 balancer，使用首个出站作为默认）：
+  - `/xray-config?config=<ENCODED_SUB>&selectedRules=%7B...%7D&customRules=%5B...%5D&use_balancer=false`
