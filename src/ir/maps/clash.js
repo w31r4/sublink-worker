@@ -110,6 +110,66 @@ export function mapIRToClash(ir, original) {
     return out;
   }
 
+  if (ir.kind === 'vmess') {
+    const out = {
+      ...base,
+      type: 'vmess',
+      uuid: original?.uuid || ir.auth?.uuid,
+      alterId: original?.alter_id,
+      cipher: original?.security,
+      tls: original?.tls?.enabled || !!ir.tls,
+      servername: ir.tls?.sni || original?.tls?.server_name || '',
+      'skip-cert-verify': original?.tls?.insecure ? true : false,
+      network: original?.transport?.type || original?.network || 'tcp',
+    };
+    if (original?.transport?.type === 'ws') {
+      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
+    } else if (original?.transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
+    } else if (original?.transport?.type === 'http') {
+      const opts = {
+        method: original.transport.method || 'GET',
+        path: Array.isArray(original.transport.path) ? original.transport.path : [original.transport.path || '/'],
+      };
+      if (original.transport.headers && Object.keys(original.transport.headers).length > 0) {
+        opts.headers = original.transport.headers;
+      }
+      out['http-opts'] = opts;
+    } else if (original?.transport?.type === 'h2') {
+      out['h2-opts'] = { path: original.transport.path, host: original.transport.host };
+    }
+    return out;
+  }
+
+  if (ir.kind === 'trojan') {
+    const out = {
+      ...base,
+      type: 'trojan',
+      password: original?.password || ir.auth?.password,
+      cipher: original?.security,
+      tls: original?.tls?.enabled || !!ir.tls,
+      'client-fingerprint': ir.tls?.utls?.fingerprint,
+      sni: ir.tls?.sni || original?.tls?.server_name || '',
+      network: original?.transport?.type || original?.network || 'tcp',
+      tfo: original?.tcp_fast_open,
+      'skip-cert-verify': original?.tls?.insecure ? true : false,
+      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
+      ...(original?.flow ? { flow: original.flow } : {}),
+    };
+    if (original?.transport?.type === 'ws') {
+      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
+    } else if (original?.transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
+    }
+    if (original?.tls?.reality?.enabled) {
+      out['reality-opts'] = {
+        'public-key': original.tls.reality.public_key,
+        'short-id': original.tls.reality.short_id,
+      };
+    }
+    return out;
+  }
+
   // Not implemented here → let builder fallback handle
   return null;
 }

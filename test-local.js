@@ -195,8 +195,8 @@ async function runAllTests() {
     }
 
     // 附加：构建级 Clash 配置输出测试（验证 proxy-groups 清理与去重）
-    await runClashOutputTest();
-    await runCountryGroupTest();
+    const sup1 = await runClashOutputTest();
+    const sup2 = await runCountryGroupTest();
 
     // 黄金样例（IR 映射 -> 目标配置）
     const golden = loadGoldenCases();
@@ -210,6 +210,11 @@ async function runAllTests() {
         console.log(`\n📊 黄金样例结果: ${okCount}/${golden.length} 通过`);
         if (okCount !== golden.length) {
             console.log('⚠️  黄金样例有失败项，请检查 IR 映射');
+        }
+        if (okCount !== golden.length || !sup1 || !sup2) {
+            console.log('❌ 总结: 附加测试/黄金样例存在失败');
+        } else {
+            console.log('✅ 总结: 附加测试/黄金样例全部通过');
         }
     }
 }
@@ -257,9 +262,12 @@ proxy-groups:
         if (!ok) {
             console.log('   期望:', expected);
             console.log('   实际:', actual);
+            return false;
         }
+        return true;
     } catch (e) {
         console.error('❌ Clash 构建输出测试失败:', e.message);
+        return false;
     }
 }
 
@@ -349,11 +357,13 @@ vmess://ewogICJ2IjogIjIiLAogICJwcyI6ICJ0dzEubm9kZS5jb20iLAogICJhZGQiOiAidHcxLm5v
         console.log(`✅ 结果: ${passed ? '通过' : '失败'}`);
         if (!passed) {
             messages.forEach(msg => console.log(`   - ${msg}`));
+            return false;
         }
-
+        return true;
     } catch (e) {
         console.error('❌ 按国家分组测试失败:', e.message);
         console.error(e.stack);
+        return false;
     }
 }
 

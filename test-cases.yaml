@@ -120,6 +120,33 @@ golden:
           port: 443
           uuid: 11111111-1111-1111-1111-111111111111
 
+  - name: Clash TROJAN IR 映射
+    target: clash
+    description: trojan:// URL 通过 IR 映射生成 Clash 代理项
+    input: |
+      trojan://topsecret@t.example.com:443?sni=example.com#TROJAN-1
+    expects:
+      proxyByName:
+        name: TROJAN-1
+        fields:
+          type: trojan
+          server: t.example.com
+          port: 443
+          password: topsecret
+
+  - name: Singbox VMESS IR 映射
+    target: singbox
+    description: vmess:// URL 通过 IR 映射生成 Sing-Box outbound
+    input: |
+      vmess://ewogICJwcyI6ICJWTUVTUy1XUyIsCiAgImFkZCI6ICJ2bS5leGFtcGxlLmNvbSIsCiAgInBvcnQiOiA0NDMsCiAgImlkIjogIjIyMjIyMjItMjIyMi0yMjIyLTIyMjItMjIyMjIyMjIyMjIyIiwKICAibmV0IjogIndzIiwKICAidHlwZSI6ICJub25lIiwKICAiaG9zdCI6ICJ2bS5leGFtcGxlLmNvbSIsCiAgInBhdGgiOiAiL3dzIiwKICAidGxzIjogInRscyIsCiAgInNuaSI6ICJ2bS5leGFtcGxlLmNvbSIKfQ==#VMESS-WS
+    expects:
+      outboundByTag:
+        tag: VMESS-WS
+        fields:
+          type: vmess
+          server: vm.example.com
+          server_port: 443
+
   - name: Singbox HY2 IR 映射
     target: singbox
     description: hy2:// URL 通过 IR 映射生成 Sing-Box outbound

@@ -59,6 +59,32 @@ export function mapIRToSingbox(ir, original) {
     return out;
   }
 
+  if (ir.kind === 'vmess') {
+    const out = {
+      ...base,
+      type: 'vmess',
+      uuid: original?.uuid || ir.auth?.uuid,
+      security: original?.security,
+      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
+      transport: original?.transport,
+      network: original?.network || 'tcp',
+    };
+    return out;
+  }
+
+  if (ir.kind === 'trojan') {
+    const out = {
+      ...base,
+      type: 'trojan',
+      password: original?.password || ir.auth?.password,
+      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
+      transport: original?.transport,
+      network: original?.network || 'tcp',
+      flow: original?.flow,
+    };
+    return out;
+  }
+
   // Let builder fallback for other kinds
   return null;
 }

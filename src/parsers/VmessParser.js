@@ -7,8 +7,14 @@ export class VmessParser {
 
   parse(url) {
     try {
-      const base64 = url.replace('vmess://', '');
-      const vmessConfig = JSON.parse(decodeBase64(base64));
+      let base64WithFragment = url.replace('vmess://', '');
+      let tagOverride;
+      const hashPos = base64WithFragment.indexOf('#');
+      if (hashPos >= 0) {
+        tagOverride = decodeURIComponent(base64WithFragment.slice(hashPos + 1));
+        base64WithFragment = base64WithFragment.slice(0, hashPos);
+      }
+      const vmessConfig = JSON.parse(decodeBase64(base64WithFragment));
       
       let tls = { "enabled": false };
       let transport;
@@ -78,7 +84,7 @@ export class VmessParser {
       }
 
       return {
-        "tag": vmessConfig.ps,
+        "tag": tagOverride || vmessConfig.ps,
         "type": "vmess",
         "server": vmessConfig.add,
         "server_port": parseInt(vmessConfig.port),
