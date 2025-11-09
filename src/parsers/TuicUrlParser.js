@@ -14,7 +14,9 @@ export class TuicParser {
     const [uuid, password] = decodeURIComponent(userinfo).split(':');
 
     const tls = {
+      enabled: true,
       sni: params.sni,
+      server_name: params.sni,
       alpn: parseArray(params.alpn),
       insecure: parseBool(params['skip-cert-verify'] ?? params.insecure ?? params.allowInsecure, true)
     };
@@ -35,4 +37,3 @@ export class TuicParser {
     });
   }
 }
-

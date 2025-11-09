@@ -31,24 +31,28 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
 
   convertProxy(proxy) {
     try {
-      const ir = toIR(proxy);
-      const mapped = mapIRToXray(downgradeByCaps(ir, 'xray'), proxy);
+      const downgraded = downgradeByCaps(proxy, 'xray');
+      const mapped = mapIRToXray(downgraded, proxy);
       if (mapped) return mapped;
-    } catch (_) {}
+    } catch (e) {
+      console.error(`Failed to map IR to Xray config for proxy: ${proxy.tags?.[0]}`, e);
+    }
     return null;
   }
 
   addProxyToConfig(proxy) {
-    if (!proxy) return;
-    this.config.outbounds = this.config.outbounds || [];
-    const similar = this.config.outbounds.filter(p => p.tag && p.tag.includes(proxy.tag));
-    if (similar.some(p => JSON.stringify({ ...p, tag: undefined }) === JSON.stringify({ ...proxy, tag: undefined }))) {
-      return;
-    }
-    if (similar.length > 0) {
-      proxy.tag = `${proxy.tag} ${similar.length + 1}`;
-    }
-    this.config.outbounds.push(proxy);
+      if (!proxy) return;
+      this.config.outbounds = this.config.outbounds || [];
+      
+      const existingNames = new Set(this.config.outbounds.map(p => p.tag));
+      let finalTag = proxy.tag;
+      let counter = 2;
+      while (existingNames.has(finalTag)) {
+          finalTag = `${proxy.tag} ${counter++}`;
+      }
+      proxy.tag = finalTag;
+
+      this.config.outbounds.push(proxy);
   }
 
   addAutoSelectGroup() {}

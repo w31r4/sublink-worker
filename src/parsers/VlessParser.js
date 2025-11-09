@@ -13,6 +13,10 @@ export class VlessParser {
     const { host, port } = parseServerInfo(serverInfo);
 
     const tls = createTlsConfig(params);
+    const alpn = parseArray(params.alpn);
+    if (alpn) {
+      tls.alpn = alpn;
+    }
     if (tls.reality) {
       tls.utls = {
         enabled: true,

@@ -2,6 +2,11 @@
 export function mapIRToClash(ir, original) {
   if (!ir) return null;
   const name = ir.tags?.[0] || 'proxy';
+  const auth = original?.auth || ir.auth || {};
+  const transport = original?.transport || ir.transport;
+  const tls = original?.tls || ir.tls;
+  const network = original?.network || ir.network;
+  const udp = typeof original?.udp !== 'undefined' ? original.udp : ir.udp;
   const base = {
     name,
     server: ir.host,
@@ -12,13 +17,13 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'anytls',
-      password: original?.password || ir.auth?.password,
+      password: auth.password,
     };
-    if (typeof original?.udp !== 'undefined') out.udp = original.udp;
-    if (ir.tls?.utls?.fingerprint) out['client-fingerprint'] = ir.tls.utls.fingerprint;
-    if (ir.tls?.sni) out.sni = ir.tls.sni;
-    if (typeof original?.tls?.insecure !== 'undefined') out['skip-cert-verify'] = !!original.tls.insecure;
-    if (ir.tls?.alpn) out.alpn = ir.tls.alpn;
+    if (typeof udp !== 'undefined') out.udp = udp;
+    if (tls?.utls?.fingerprint) out['client-fingerprint'] = tls.utls.fingerprint;
+    if (tls?.sni) out.sni = tls.sni;
+    if (typeof tls?.insecure !== 'undefined') out['skip-cert-verify'] = !!tls.insecure;
+    if (tls?.alpn) out.alpn = tls.alpn;
     const p = ir.proto?.anytls || {};
     if (typeof p.idle_session_check_interval !== 'undefined') out['idle-session-check-interval'] = p.idle_session_check_interval;
     if (typeof p.idle_session_timeout !== 'undefined') out['idle-session-timeout'] = p.idle_session_timeout;
@@ -29,8 +34,8 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'ss',
-      cipher: original?.method,
-      password: original?.password,
+      cipher: auth.method,
+      password: auth.password,
     };
     return out;
   }
@@ -40,14 +45,14 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'tuic',
-      uuid: original?.uuid || ir.auth?.uuid,
-      password: original?.password || ir.auth?.password,
+      uuid: auth.uuid,
+      password: auth.password,
       'congestion-controller': p.congestion_control,
-      'skip-cert-verify': original?.tls?.insecure ? true : false,
-      'sni': ir.tls?.sni,
-      'udp-relay-mode': original?.udp_relay_mode || p.udp_relay_mode || 'native',
+      'skip-cert-verify': tls?.insecure ? true : false,
+      'sni': tls?.sni,
+      'udp-relay-mode': p.udp_relay_mode || 'native',
     };
-    if (Array.isArray(ir.tls?.alpn)) out.alpn = ir.tls.alpn;
+    if (Array.isArray(tls?.alpn)) out.alpn = tls.alpn;
     if (typeof p.zero_rtt !== 'undefined') out['zero-rtt'] = p.zero_rtt;
     if (typeof p.reduce_rtt !== 'undefined') out['reduce-rtt'] = p.reduce_rtt;
     if (typeof p.fast_open !== 'undefined') out['fast-open'] = p.fast_open;
@@ -59,39 +64,39 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'vless',
-      uuid: original?.uuid || ir.auth?.uuid,
-      cipher: original?.security,
-      tls: original?.tls?.enabled || !!ir.tls,
-      ...(ir.tls?.utls?.fingerprint ? { 'client-fingerprint': ir.tls.utls.fingerprint } : {}),
-      servername: ir.tls?.sni || original?.tls?.server_name || '',
-      network: original?.transport?.type || original?.network || 'tcp',
-      tfo: original?.tcp_fast_open,
-      'skip-cert-verify': original?.tls?.insecure ? true : false,
-      ...(typeof original?.udp !== 'undefined' ? { udp: original.udp } : {}),
-      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
-      ...(original?.packet_encoding ? { 'packet-encoding': original.packet_encoding } : {}),
-      ...(original?.flow ? { flow: original.flow } : {}),
+      uuid: auth.uuid,
+      cipher: auth.method,
+      tls: tls?.enabled || !!tls,
+      ...(tls?.utls?.fingerprint ? { 'client-fingerprint': tls.utls.fingerprint } : {}),
+      servername: tls?.sni || '',
+      network: transport?.type || network || 'tcp',
+      tfo: ir.tcp_fast_open,
+      'skip-cert-verify': tls?.insecure ? true : false,
+      ...(typeof udp !== 'undefined' ? { udp } : {}),
+      ...(Array.isArray(tls?.alpn) ? { alpn: tls.alpn } : {}),
+      ...(ir.packet_encoding ? { 'packet-encoding': ir.packet_encoding } : {}),
+      ...(ir.flow ? { flow: ir.flow } : {}),
     };
-    if (original?.transport?.type === 'ws') {
-      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
-    } else if (original?.transport?.type === 'grpc') {
-      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
-    } else if (original?.transport?.type === 'http') {
+    if (transport?.type === 'ws') {
+      out['ws-opts'] = { path: transport.path, headers: transport.headers };
+    } else if (transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': transport.service_name };
+    } else if (transport?.type === 'http') {
       const opts = {
-        method: original.transport.method || 'GET',
-        path: Array.isArray(original.transport.path) ? original.transport.path : [original.transport.path || '/'],
+        method: transport.method || 'GET',
+        path: Array.isArray(transport.path) ? transport.path : [transport.path || '/'],
       };
-      if (original.transport.headers && Object.keys(original.transport.headers).length > 0) {
-        opts.headers = original.transport.headers;
+      if (transport.headers && Object.keys(transport.headers).length > 0) {
+        opts.headers = transport.headers;
       }
       out['http-opts'] = opts;
-    } else if (original?.transport?.type === 'h2') {
-      out['h2-opts'] = { path: original.transport.path, host: original.transport.host };
+    } else if (transport?.type === 'h2') {
+      out['h2-opts'] = { path: transport.path, host: transport.host };
     }
-    if (ir.tls?.reality) {
+    if (tls?.reality) {
       out['reality-opts'] = {
-        'public-key': ir.tls.reality.publicKey || ir.tls.reality.public_key,
-        'short-id': ir.tls.reality.shortId || ir.tls.reality.short_id,
+        'public-key': tls.reality.publicKey || tls.reality.public_key,
+        'short-id': tls.reality.shortId || tls.reality.short_id,
       };
     }
     return out;
@@ -102,18 +107,18 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'hysteria2',
-      ...(original?.ports ? { ports: original.ports } : {}),
-      obfs: original?.obfs?.type || p.obfs?.type,
-      'obfs-password': original?.obfs?.password || p.obfs?.password,
-      password: original?.password || ir.auth?.password,
-      auth: original?.auth || p.auth,
-      up: original?.up || p.up,
-      down: original?.down || p.down,
-      'recv-window-conn': original?.recv_window_conn || p.recv_window_conn,
-      sni: ir.tls?.sni || original?.tls?.server_name || '',
-      'skip-cert-verify': original?.tls?.insecure ? true : false,
+      ...(p.ports ? { ports: p.ports } : {}),
+      obfs: p.obfs?.type,
+      'obfs-password': p.obfs?.password,
+      password: auth.password,
+      auth: p.auth,
+      up: p.up,
+      down: p.down,
+      'recv-window-conn': p.recv_window_conn,
+      sni: tls?.sni || '',
+      'skip-cert-verify': tls?.insecure ? true : false,
       ...(typeof p.hop_interval !== 'undefined' ? { 'hop-interval': p.hop_interval } : {}),
-      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
+      ...(Array.isArray(tls?.alpn) ? { alpn: tls.alpn } : {}),
       ...(typeof p.fast_open !== 'undefined' ? { 'fast-open': p.fast_open } : {}),
     };
     return out;
@@ -123,29 +128,29 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'vmess',
-      uuid: original?.uuid || ir.auth?.uuid,
-      alterId: original?.alter_id,
-      cipher: original?.security,
-      tls: original?.tls?.enabled || !!ir.tls,
-      servername: ir.tls?.sni || original?.tls?.server_name || '',
-      'skip-cert-verify': original?.tls?.insecure ? true : false,
-      network: original?.transport?.type || original?.network || 'tcp',
+      uuid: auth.uuid,
+      alterId: ir.alterId,
+      cipher: auth.method,
+      tls: tls?.enabled || !!tls,
+      servername: tls?.sni || '',
+      'skip-cert-verify': tls?.insecure ? true : false,
+      network: transport?.type || network || 'tcp',
     };
-    if (original?.transport?.type === 'ws') {
-      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
-    } else if (original?.transport?.type === 'grpc') {
-      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
-    } else if (original?.transport?.type === 'http') {
+    if (transport?.type === 'ws') {
+      out['ws-opts'] = { path: transport.path, headers: transport.headers };
+    } else if (transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': transport.service_name };
+    } else if (transport?.type === 'http') {
       const opts = {
-        method: original.transport.method || 'GET',
-        path: Array.isArray(original.transport.path) ? original.transport.path : [original.transport.path || '/'],
+        method: transport.method || 'GET',
+        path: Array.isArray(transport.path) ? transport.path : [transport.path || '/'],
       };
-      if (original.transport.headers && Object.keys(original.transport.headers).length > 0) {
-        opts.headers = original.transport.headers;
+      if (transport.headers && Object.keys(transport.headers).length > 0) {
+        opts.headers = transport.headers;
       }
       out['http-opts'] = opts;
-    } else if (original?.transport?.type === 'h2') {
-      out['h2-opts'] = { path: original.transport.path, host: original.transport.host };
+    } else if (transport?.type === 'h2') {
+      out['h2-opts'] = { path: transport.path, host: transport.host };
     }
     return out;
   }
@@ -154,26 +159,26 @@ export function mapIRToClash(ir, original) {
     const out = {
       ...base,
       type: 'trojan',
-      password: original?.password || ir.auth?.password,
-      cipher: original?.security,
-      tls: original?.tls?.enabled || !!ir.tls,
-      ...(ir.tls?.utls?.fingerprint ? { 'client-fingerprint': ir.tls.utls.fingerprint } : {}),
-      sni: ir.tls?.sni || original?.tls?.server_name || '',
-      network: original?.transport?.type || original?.network || 'tcp',
-      tfo: original?.tcp_fast_open,
-      'skip-cert-verify': original?.tls?.insecure ? true : false,
-      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
-      ...(original?.flow ? { flow: original.flow } : {}),
+      password: auth.password,
+      cipher: auth.method,
+      tls: tls?.enabled || !!tls,
+      ...(tls?.utls?.fingerprint ? { 'client-fingerprint': tls.utls.fingerprint } : {}),
+      sni: tls?.sni || '',
+      network: transport?.type || network || 'tcp',
+      tfo: ir.tcp_fast_open,
+      'skip-cert-verify': tls?.insecure ? true : false,
+      ...(Array.isArray(tls?.alpn) ? { alpn: tls.alpn } : {}),
+      ...(ir.flow ? { flow: ir.flow } : {}),
     };
-    if (original?.transport?.type === 'ws') {
-      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
-    } else if (original?.transport?.type === 'grpc') {
-      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
+    if (transport?.type === 'ws') {
+      out['ws-opts'] = { path: transport.path, headers: transport.headers };
+    } else if (transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': transport.service_name };
     }
-    if (ir.tls?.reality) {
+    if (tls?.reality) {
       out['reality-opts'] = {
-        'public-key': ir.tls.reality.publicKey || ir.tls.reality.public_key,
-        'short-id': ir.tls.reality.shortId || ir.tls.reality.short_id,
+        'public-key': tls.reality.publicKey || tls.reality.public_key,
+        'short-id': tls.reality.shortId || tls.reality.short_id,
       };
     }
     return out;

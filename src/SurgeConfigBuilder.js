@@ -33,122 +33,124 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     }
 
     convertProxy(proxy) {
+        const tag = proxy.tags?.[0] || proxy.tag || 'proxy';
+        const server = proxy.host;
+        const port = proxy.port;
+        const tls = proxy.tls || {};
+        const transport = proxy.transport;
+        const getAlpn = () => (Array.isArray(tls.alpn) && tls.alpn.length > 0 ? `, alpn=${tls.alpn.join(',')}` : '');
+
         let surgeProxy;
-        switch (proxy.type) {
-            case 'shadowsocks':
-                surgeProxy = `${proxy.tag} = ss, ${proxy.server}, ${proxy.server_port}, encrypt-method=${proxy.method}, password=${proxy.password}`;
+        switch (proxy.kind) {
+            case 'shadowsocks': {
+                const method = proxy.auth?.method;
+                const password = proxy.auth?.password;
+                surgeProxy = `${tag} = ss, ${server}, ${port}, encrypt-method=${method}, password=${password}`;
                 break;
-            case 'vmess':
-                surgeProxy = `${proxy.tag} = vmess, ${proxy.server}, ${proxy.server_port}, username=${proxy.uuid}`;
-                if (proxy.alter_id == 0) {
+            }
+            case 'vmess': {
+                const uuid = proxy.auth?.uuid;
+                const alterId = typeof proxy.alterId !== 'undefined'
+                    ? proxy.alterId
+                    : proxy.ext?.clash?.alterId;
+                surgeProxy = `${tag} = vmess, ${server}, ${port}, username=${uuid}`;
+                if (alterId === 0) {
                     surgeProxy += ', vmess-aead=true';
                 }
-                if (proxy.tls?.enabled) {
+                if (tls?.enabled) {
                     surgeProxy += ', tls=true';
-                    if (proxy.tls.server_name) {
-                        surgeProxy += `, sni=${proxy.tls.server_name}`;
+                    if (tls.sni) {
+                        surgeProxy += `, sni=${tls.sni}`;
                     }
-                    if (proxy.tls.insecure) {
+                    if (tls.insecure) {
                         surgeProxy += ', skip-cert-verify=true';
                     }
-                    if (proxy.tls.alpn) {
-                        surgeProxy += `, alpn=${proxy.tls.alpn.join(',')}`;
-                    }
+                    surgeProxy += getAlpn();
                 }
-                if (proxy.transport?.type === 'ws') {
-                    surgeProxy += `, ws=true, ws-path=${proxy.transport.path}`;
-                    if (proxy.transport.headers) {
-                        surgeProxy += `, ws-headers=Host:${proxy.transport.headers.Host}`;
+                if (transport?.type === 'ws') {
+                    surgeProxy += `, ws=true, ws-path=${transport.path || '/'}`;
+                    if (transport.headers?.Host) {
+                        surgeProxy += `, ws-headers=Host:${transport.headers.Host}`;
                     }
-                } else if (proxy.transport?.type === 'grpc') {
-                    surgeProxy += `, grpc-service-name=${proxy.transport.service_name}`;
+                } else if (transport?.type === 'grpc') {
+                    surgeProxy += `, grpc-service-name=${transport.service_name}`;
                 }
                 break;
-            case 'trojan':
-                surgeProxy = `${proxy.tag} = trojan, ${proxy.server}, ${proxy.server_port}, password=${proxy.password}`;
-                if (proxy.tls?.server_name) {
-                    surgeProxy += `, sni=${proxy.tls.server_name}`;
+            }
+            case 'trojan': {
+                const password = proxy.auth?.password;
+                surgeProxy = `${tag} = trojan, ${server}, ${port}, password=${password}`;
+                if (tls?.sni) {
+                    surgeProxy += `, sni=${tls.sni}`;
                 }
-                if (proxy.tls?.insecure) {
+                if (tls?.insecure) {
                     surgeProxy += ', skip-cert-verify=true';
                 }
-                if (proxy.tls?.alpn) {
-                    surgeProxy += `, alpn=${proxy.tls.alpn.join(',')}`;
-                }
-                if (proxy.transport?.type === 'ws') {
-                    surgeProxy += `, ws=true, ws-path=${proxy.transport.path}`;
-                    if (proxy.transport.headers) {
-                        surgeProxy += `, ws-headers=Host:${proxy.transport.headers.Host}`;
+                surgeProxy += getAlpn();
+                if (transport?.type === 'ws') {
+                    surgeProxy += `, ws=true, ws-path=${transport.path || '/'}`;
+                    if (transport.headers?.Host) {
+                        surgeProxy += `, ws-headers=Host:${transport.headers.Host}`;
                     }
-                } else if (proxy.transport?.type === 'grpc') {
-                    surgeProxy += `, grpc-service-name=${proxy.transport.service_name}`;
+                } else if (transport?.type === 'grpc') {
+                    surgeProxy += `, grpc-service-name=${transport.service_name}`;
                 }
                 break;
-            case 'hysteria2':
-                surgeProxy = `${proxy.tag} = hysteria2, ${proxy.server}, ${proxy.server_port}, password=${proxy.password}`;
-                if (proxy.tls?.server_name) {
-                    surgeProxy += `, sni=${proxy.tls.server_name}`;
+            }
+            case 'hysteria2': {
+                const password = proxy.auth?.password;
+                surgeProxy = `${tag} = hysteria2, ${server}, ${port}, password=${password}`;
+                if (tls?.sni) {
+                    surgeProxy += `, sni=${tls.sni}`;
                 }
-                if (proxy.tls?.insecure) {
+                if (tls?.insecure) {
                     surgeProxy += ', skip-cert-verify=true';
                 }
-                if (proxy.tls?.alpn) {
-                    surgeProxy += `, alpn=${proxy.tls.alpn.join(',')}`;
-                }
+                surgeProxy += getAlpn();
                 break;
-            case 'tuic':
-                surgeProxy = `${proxy.tag} = tuic, ${proxy.server}, ${proxy.server_port}, password=${proxy.password}, uuid=${proxy.uuid}`;
-                if (proxy.tls?.server_name) {
-                    surgeProxy += `, sni=${proxy.tls.server_name}`;
+            }
+            case 'tuic': {
+                const password = proxy.auth?.password;
+                const uuid = proxy.auth?.uuid;
+                surgeProxy = `${tag} = tuic, ${server}, ${port}, password=${password}, uuid=${uuid}`;
+                if (tls?.sni) {
+                    surgeProxy += `, sni=${tls.sni}`;
                 }
-                if (proxy.tls?.alpn) {
-                    surgeProxy += `, alpn=${proxy.tls.alpn.join(',')}`;
-                }
-                if (proxy.tls?.insecure) {
+                surgeProxy += getAlpn();
+                if (tls?.insecure) {
                     surgeProxy += ', skip-cert-verify=true';
                 }
-                if (proxy.congestion_control) {
-                    surgeProxy += `, congestion-controller=${proxy.congestion_control}`;
+                const tuic = proxy.proto?.tuic || {};
+                if (tuic.congestion_control) {
+                    surgeProxy += `, congestion-controller=${tuic.congestion_control}`;
                 }
-                if (proxy.udp_relay_mode) {
-                    surgeProxy += `, udp-relay-mode=${proxy.udp_relay_mode}`;
+                if (tuic.udp_relay_mode) {
+                    surgeProxy += `, udp-relay-mode=${tuic.udp_relay_mode}`;
                 }
                 break;
+            }
             default:
-                surgeProxy = `# ${proxy.tag} - Unsupported proxy type: ${proxy.type}`;
+                surgeProxy = `# ${tag} - Unsupported proxy type: ${proxy.kind}`;
         }
         return surgeProxy;
     }
 
     addProxyToConfig(proxy) {
         this.config.proxies = this.config.proxies || [];
-        
-        // Get the name of the proxy to be added
+
         const proxyName = this.getProxyName(proxy);
+        const existingNames = new Set(this.config.proxies.map(p => this.getProxyName(p)));
         
-        // Check if there are proxies with similar names in existing proxies
-        const similarProxies = this.config.proxies
-            .map(p => this.getProxyName(p))
-            .filter(name => name.includes(proxyName));
-            
-        // Check if there is a proxy with identical configuration
-        const isIdentical = this.config.proxies.some(p => 
-            // Compare the remaining configuration after removing the name part
-            p.substring(p.indexOf('=')) === proxy.substring(proxy.indexOf('='))
-        );
-        
-        if (isIdentical) {
-            // If there is a proxy with identical configuration, skip adding it
-            return;
+        let finalName = proxyName;
+        let counter = 2;
+        while (existingNames.has(finalName)) {
+            finalName = `${proxyName} ${counter++}`;
         }
-        
-        // If there are proxies with similar names but different configurations, modify the name
-        if (similarProxies.length > 0) {
-            // Get the position of the equals sign
+
+        if (finalName !== proxyName) {
             const equalsPos = proxy.indexOf('=');
             if (equalsPos > 0) {
-                // Create a new proxy string with a number appended to the name
-                proxy = `${proxyName} ${similarProxies.length + 1}${proxy.substring(equalsPos)}`;
+                proxy = `${finalName} ${proxy.substring(equalsPos)}`;
             }
         }
         

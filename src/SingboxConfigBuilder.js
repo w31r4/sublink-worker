@@ -31,7 +31,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
 
     convertProxy(proxy) {
         try {
-            const mapped = mapIRToSingbox(downgradeByCaps(proxy, 'singbox'));
+            const downgraded = downgradeByCaps(proxy, 'singbox');
+            const mapped = mapIRToSingbox(downgraded, proxy);
             if (mapped) return mapped;
         } catch (e) {
             console.error(`Failed to map IR to Singbox config for proxy: ${proxy.tags?.[0]}`, e);
@@ -40,25 +41,15 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     addProxyToConfig(proxy) {
-        // Check if there are proxies with similar tags in existing outbounds
-        const similarProxies = this.config.outbounds.filter(p => p.tag && p.tag.includes(proxy.tag));
+        this.config.outbounds = this.config.outbounds || [];
 
-        // Check if there is a proxy with identical data (excluding the tag)
-        const isIdentical = similarProxies.some(p => {
-            const { tag: _, ...restOfProxy } = proxy; // Exclude the tag attribute
-            const { tag: __, ...restOfP } = p;       // Exclude the tag attribute
-            return JSON.stringify(restOfProxy) === JSON.stringify(restOfP);
-        });
-
-        if (isIdentical) {
-            // If there is a proxy with identical data, skip adding it
-            return;
+        const existingTags = new Set(this.config.outbounds.map(o => o.tag));
+        let finalTag = proxy.tag;
+        let counter = 2;
+        while (existingTags.has(finalTag)) {
+            finalTag = `${proxy.tag} ${counter++}`;
         }
-
-        // If there are proxies with similar tags but different data, modify the tag name
-        if (similarProxies.length > 0) {
-            proxy.tag = `${proxy.tag} ${similarProxies.length + 1}`;
-        }
+        proxy.tag = finalTag;
 
         this.config.outbounds.push(proxy);
     }

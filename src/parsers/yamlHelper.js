@@ -1,4 +1,4 @@
- import {
+import {
    createShadowsocksNode,
    createVmessNode,
    createVlessNode,
@@ -100,18 +100,25 @@
          password: p.password,
          flow: p.flow,
        });
-     case 'hysteria2':
-     case 'hysteria':
-     case 'hy2':
-       const obfs = p.obfs ? { type: p.obfs, password: p['obfs-password'] } : undefined;
-       return createHysteria2Node({
-         ...common,
-         password: p.password,
-         obfs,
-         auth: p.auth,
-         up: p.up,
-         down: p.down,
-       });
+    case 'hysteria2':
+    case 'hysteria':
+    case 'hy2': {
+      const obfs = p.obfs ? { type: p.obfs, password: p['obfs-password'] } : undefined;
+      const hopInterval = typeof p['hop-interval'] !== 'undefined' ? Number(p['hop-interval']) : undefined;
+      return createHysteria2Node({
+        ...common,
+        password: p.password,
+        obfs,
+        auth: p.auth,
+        up: p.up,
+        down: p.down,
+        recv_window_conn: p['recv-window-conn'],
+        ports: p.ports,
+        hop_interval: hopInterval,
+        fast_open: typeof p['fast-open'] !== 'undefined' ? !!p['fast-open'] : undefined,
+        alpn: toArray(p.alpn),
+      });
+    }
      case 'tuic':
        return createTuicNode({
          ...common,

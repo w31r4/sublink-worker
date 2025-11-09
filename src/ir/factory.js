@@ -1,5 +1,13 @@
 // IR Factory: Creates standardized Intermediate Representation nodes.
 
+function sanitizeTags(tags) {
+  if (!tags) return [];
+  return []
+    .concat(tags)
+    .map(tag => (tag == null ? '' : String(tag).trim()))
+    .filter(Boolean);
+}
+
 /**
  * Creates a base IR node with common fields and performs basic validation.
  * @param {object} data - The input data from a parser.
@@ -7,20 +15,29 @@
  * @throws {Error} if required fields are missing.
  */
 function createBaseNode(data) {
-  if (!data.host || !data.port) {
+  if (!data.kind) {
+    throw new Error('kind is required for all nodes');
+  }
+  if (!data.host || typeof data.port === 'undefined' || data.port === null) {
     throw new Error('host and port are required for all nodes');
   }
-  return {
+  const port = Number(data.port);
+  if (!Number.isFinite(port)) {
+    throw new Error('port must be a valid number');
+  }
+  const node = {
     kind: data.kind,
     host: data.host,
-    port: parseInt(data.port, 10),
-    tags: data.tags || [],
+    port,
+    tags: sanitizeTags(data.tags),
     version: '1.0.0',
-    ...(typeof data.udp !== 'undefined' && { udp: data.udp }),
-    ...(data.network && { network: data.network }),
-    ...(data.transport && { transport: data.transport }),
-    ...(data.tls && { tls: data.tls }),
   };
+  if (typeof data.udp !== 'undefined') node.udp = data.udp;
+  if (data.network) node.network = data.network;
+  if (data.transport) node.transport = data.transport;
+  if (data.tls) node.tls = { ...data.tls };
+  if (data.ext) node.ext = { ...data.ext };
+  return node;
 }
 
 /**
@@ -37,9 +54,15 @@ export function createVmessNode(data) {
     uuid: data.uuid,
     method: data.security || 'auto',
   };
-  // Stash alterId for clients that need it (e.g., Clash)
   if (typeof data.alter_id !== 'undefined') {
-    base.ext = { clash: { alterId: data.alter_id } };
+    base.alterId = Number(data.alter_id);
+    base.ext = {
+      ...(base.ext || {}),
+      clash: { ...(base.ext?.clash || {}), alterId: base.alterId },
+    };
+  }
+  if (typeof data.tcp_fast_open !== 'undefined') {
+    base.tcp_fast_open = data.tcp_fast_open;
   }
   return base;
 }
@@ -91,7 +114,7 @@ export function createShadowsocksNode(data) {
   if (!data.password || !data.method) {
     throw new Error('password and method are required for Shadowsocks');
   }
-  const base = createBaseNode({ ...data, kind: 'ss' });
+  const base = createBaseNode({ ...data, kind: 'shadowsocks' });
   base.auth = {
     password: data.password,
     method: data.method,
@@ -120,8 +143,15 @@ export function createHysteria2Node(data) {
       auth: data.auth,
       up: data.up,
       down: data.down,
-    }
+      recv_window_conn: data.recv_window_conn,
+      ports: data.ports,
+      hop_interval: data.hop_interval,
+      fast_open: data.fast_open,
+    },
   };
+  if (Array.isArray(data.alpn) && data.alpn.length > 0) {
+    base.tls = { ...(base.tls || { enabled: true }), alpn: data.alpn };
+  }
 
   return base;
 }
@@ -143,10 +173,10 @@ export function createAnytlsNode(data) {
   // Anytls specific fields
   base.proto = {
     anytls: {
-      'idle-session-check-interval': data['idle-session-check-interval'],
-      'idle-session-timeout': data['idle-session-timeout'],
-      'min-idle-session': data['min-idle-session'],
-    }
+      idle_session_check_interval: data.idle_session_check_interval,
+      idle_session_timeout: data.idle_session_timeout,
+      min_idle_session: data.min_idle_session,
+    },
   };
 
   return base;

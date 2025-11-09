@@ -23,7 +23,7 @@ router
   .on('GET', '/clash', handleClash)
   .on('GET', '/surge', handleSurge)
   .on('GET', '/xray-config', handleXrayConfig)
-  .on('GET', '/xray', handleXraySubscription)
+  .on('GET', '/sub', handleXraySubscription)
   .on('GET', '/shorten', handleShorten)
   .on('GET', '/shorten-v2', handleShortenV2)
   .on('GET', '/favicon.ico', handleFavicon)

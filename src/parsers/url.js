@@ -30,12 +30,13 @@ export function parseServerInfo(serverInfo) {
 	return { addressPart, params, name };
   }
   
-  export function createTlsConfig(params) {
+export function createTlsConfig(params) {
 	let tls = { enabled: false };
 	if (params.security != 'none') {
 	  tls = {
 		enabled: true,
 		server_name: params.sni || params.host,
+		sni: params.sni || params.host,
 		insecure: !!params?.allowInsecure || !!params?.insecure || !!params?.allow_insecure,
 		// utls: {
 		//   enabled: true,
@@ -49,6 +50,9 @@ export function parseServerInfo(serverInfo) {
 		  short_id: params.sid,
 		};
 	  }
+	}
+	if (!tls.sni && tls.server_name) {
+	  tls.sni = tls.server_name;
 	}
 	return tls;
   }

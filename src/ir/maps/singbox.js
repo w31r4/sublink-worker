@@ -1,6 +1,10 @@
 // Map Core IR to sing-box outbound object (scaffold)
 export function mapIRToSingbox(ir, original) {
   if (!ir) return null;
+  const auth = original?.auth || ir.auth || {};
+  const transport = original?.transport || ir.transport;
+  const tls = original?.tls || ir.tls;
+  const network = original?.network || ir.network || 'tcp';
   const base = {
     type: ir.kind,
     tag: ir.tags?.[0] || 'proxy',
@@ -18,8 +22,8 @@ export function mapIRToSingbox(ir, original) {
     const p = ir.proto?.anytls || {};
     const out = {
       ...base,
-      password: original?.password || ir.auth?.password,
-      tls: original?.tls && typeof original.tls === 'object' ? { ...original.tls } : { enabled: true },
+      password: auth.password,
+      tls: tls && typeof tls === 'object' ? { ...tls } : { enabled: true },
     };
     if (typeof p.idle_session_check_interval !== 'undefined') out.idle_session_check_interval = toDuration(p.idle_session_check_interval);
     if (typeof p.idle_session_timeout !== 'undefined') out.idle_session_timeout = toDuration(p.idle_session_timeout);
@@ -30,8 +34,8 @@ export function mapIRToSingbox(ir, original) {
     const out = {
       ...base,
       type: 'shadowsocks',
-      method: original?.method,
-      password: original?.password,
+      method: auth.method,
+      password: auth.password,
     };
     return out;
   }
@@ -39,11 +43,11 @@ export function mapIRToSingbox(ir, original) {
   if (ir.kind === 'vless') {
     const out = {
       ...base,
-      uuid: original?.uuid || ir.auth?.uuid,
-      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
-      transport: original?.transport,
-      network: original?.network || 'tcp',
-      flow: original?.flow,
+      uuid: auth.uuid,
+      tls: tls ? { ...tls } : undefined,
+      transport,
+      network,
+      flow: ir.flow,
     };
     return out;
   }
@@ -53,17 +57,17 @@ export function mapIRToSingbox(ir, original) {
     const out = {
       ...base,
       type: 'hysteria2',
-      password: original?.password || ir.auth?.password,
-      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
-      obfs: original?.obfs,
-      auth: original?.auth || p.auth,
-      recv_window_conn: original?.recv_window_conn || p.recv_window_conn,
-      up: original?.up || p.up,
-      down: original?.down || p.down,
-      ports: original?.ports || p.ports,
-      hop_interval: typeof p.hop_interval !== 'undefined' ? p.hop_interval : original?.hop_interval,
-      alpn: ir.tls?.alpn,
-      fast_open: typeof p.fast_open !== 'undefined' ? p.fast_open : original?.fast_open,
+      password: auth.password,
+      tls: tls ? { ...tls } : undefined,
+      obfs: p.obfs,
+      auth: p.auth,
+      recv_window_conn: p.recv_window_conn,
+      up: p.up,
+      down: p.down,
+      ports: p.ports,
+      hop_interval: typeof p.hop_interval !== 'undefined' ? p.hop_interval : undefined,
+      alpn: tls?.alpn,
+      fast_open: typeof p.fast_open !== 'undefined' ? p.fast_open : undefined,
     };
     return out;
   }
@@ -72,11 +76,11 @@ export function mapIRToSingbox(ir, original) {
     const out = {
       ...base,
       type: 'vmess',
-      uuid: original?.uuid || ir.auth?.uuid,
-      security: original?.security,
-      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
-      transport: original?.transport,
-      network: original?.network || 'tcp',
+      uuid: auth.uuid,
+      security: auth.method,
+      tls: tls ? { ...tls } : undefined,
+      transport,
+      network,
     };
     return out;
   }
@@ -85,11 +89,11 @@ export function mapIRToSingbox(ir, original) {
     const out = {
       ...base,
       type: 'trojan',
-      password: original?.password || ir.auth?.password,
-      tls: original?.tls || (ir.tls ? { enabled: true, server_name: ir.tls.sni, alpn: ir.tls.alpn } : undefined),
-      transport: original?.transport,
-      network: original?.network || 'tcp',
-      flow: original?.flow,
+      password: auth.password,
+      tls: tls ? { ...tls } : undefined,
+      transport,
+      network,
+      flow: ir.flow,
     };
     return out;
   }

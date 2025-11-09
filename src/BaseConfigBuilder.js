@@ -27,7 +27,7 @@ export class BaseConfigBuilder {
 
     async parseCustomItems() {
         const input = this.inputString || '';
-        const parsedItems = [];
+        let parsedItems = [];
 
         // Try parsing as a whole YAML config first
         try {
@@ -49,7 +49,7 @@ export class BaseConfigBuilder {
             // Not a valid YAML, proceed to line-by-line parsing
         }
 
-        // Line-by-line processing for subscription links
+        // Fallback to line-by-line parsing for proxy links or subscriptions
         const lines = input.split('\n').filter(line => line.trim() !== '');
         for (const line of lines) {
             let decodedLines = tryDecodeSubscriptionLines(line);
@@ -64,17 +64,16 @@ export class BaseConfigBuilder {
                         const text = await response.text();
                         let subLines = tryDecodeSubscriptionLines(text);
                         if (!Array.isArray(subLines)) subLines = [subLines];
-                        
                         for (const subLine of subLines) {
-                            const parsed = await parseProxyLink(subLine, this.userAgent);
-                            if (parsed) parsedItems.push(parsed);
+                            const proxy = await parseProxyLink(subLine, this.userAgent);
+                            if (proxy) parsedItems.push(proxy);
                         }
                     } catch (e) {
-                        console.warn(`Failed to fetch subscription: ${decodedLine}`, e);
+                        console.warn(`Failed to fetch or process subscription: ${decodedLine}`, e);
                     }
                 } else { // It's a direct proxy link
-                    const parsed = await parseProxyLink(decodedLine, this.userAgent);
-                    if (parsed) parsedItems.push(parsed);
+                    const proxy = await parseProxyLink(decodedLine, this.userAgent);
+                    if (proxy) parsedItems.push(proxy);
                 }
             }
         }
@@ -169,11 +168,11 @@ export class BaseConfigBuilder {
     addCustomItems(customItems) {
         const validItems = customItems.filter(item => item != null);
         validItems.forEach(item => {
-            if (item?.tag) {
-                const convertedProxy = this.convertProxy(item);
-                if (convertedProxy) {
-                    this.addProxyToConfig(convertedProxy);
-                }
+            const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean) : [];
+            const node = tags.length > 0 ? item : { ...item, tags: [item?.tag || 'proxy'] };
+            const convertedProxy = this.convertProxy(node);
+            if (convertedProxy) {
+                this.addProxyToConfig(convertedProxy);
             }
         });
     }

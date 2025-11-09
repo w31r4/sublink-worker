@@ -26,8 +26,6 @@ export class Hysteria2Parser {
       password = params.auth;
     }
 
-    const tls = createTlsConfig(params);
-
     const obfs = {};
     if (params['obfs-password']) {
       obfs.type = params.obfs;
@@ -35,6 +33,14 @@ export class Hysteria2Parser {
     }
 
     const hopInterval = parseMaybeNumber(params['hop-interval']);
+    const recvWindowConn = parseMaybeNumber(params['recv-window-conn'] ?? params.recv_window_conn);
+    const ports = params.ports ? String(params.ports) : undefined;
+    const alpn = parseArray(params.alpn);
+    const fastOpen = parseBool(params['fast-open']);
+    const tls = createTlsConfig(params);
+    if (alpn) {
+      tls.alpn = alpn;
+    }
 
     return createHysteria2Node({
       host,
@@ -45,8 +51,12 @@ export class Hysteria2Parser {
       auth: params.auth,
       up: params.up ?? (params.upmbps ? parseMaybeNumber(params.upmbps) : undefined),
       down: params.down ?? (params.downmbps ? parseMaybeNumber(params.downmbps) : undefined),
+      recv_window_conn: recvWindowConn,
+      ports,
+      hop_interval: hopInterval,
+      fast_open: fastOpen,
+      alpn,
       tags: name ? [name] : [],
     });
   }
 }
-

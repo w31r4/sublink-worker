@@ -14,11 +14,11 @@ export async function handleMainPage({ url }) {
   });
 }
 
-async function handleConfig(request, builderClass, format) {
+async function handleConfig(request, builderClass, format, builderOptions = {}) {
     const url = new URL(request.url);
     const inputString = url.searchParams.get('config');
     let selectedRules = url.searchParams.get('selectedRules');
-    let customRules = url.searchParams.get('customRules');
+    let customRules = url.search_params.get('customRules');
     const groupByCountry = url.searchParams.get('group_by_country') === 'true';
     let lang = url.searchParams.get('lang') || 'zh-CN';
     let userAgent = url.searchParams.get('ua') || 'curl/7.74.0';
@@ -29,19 +29,25 @@ async function handleConfig(request, builderClass, format) {
 
     if (PREDEFINED_RULE_SETS[selectedRules]) {
         selectedRules = PREDEFINED_RULE_SETS[selectedRules];
-    } else {
+    } else if (selectedRules) {
         try {
             selectedRules = JSON.parse(decodeURIComponent(selectedRules));
         } catch (error) {
             console.error('Error parsing selectedRules:', error);
             selectedRules = PREDEFINED_RULE_SETS.minimal;
         }
+    } else {
+        selectedRules = PREDEFINED_RULE_SETS.minimal;
     }
 
-    try {
-        customRules = JSON.parse(decodeURIComponent(customRules));
-    } catch (error) {
-        console.error('Error parsing customRules:', error);
+    if (customRules) {
+        try {
+            customRules = JSON.parse(decodeURIComponent(customRules));
+        } catch (error) {
+            console.error('Error parsing customRules:', error);
+            customRules = [];
+        }
+    } else {
         customRules = [];
     }
 
@@ -54,7 +60,7 @@ async function handleConfig(request, builderClass, format) {
         }
     }
 
-    const configBuilder = new builderClass(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry);
+    const configBuilder = new builderClass(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, builderOptions);
     if (builderClass === SurgeConfigBuilder) {
         configBuilder.setSubscriptionUrl(url.href);
     }
@@ -89,30 +95,15 @@ export async function handleSurge({ request }) {
 
 export async function handleXrayConfig({ request }) {
     const url = new URL(request.url);
-    const inputString = url.searchParams.get('config');
-    let selectedRules = url.searchParams.get('selectedRules');
-    let customRules = url.searchParams.get('customRules');
-    const groupByCountry = url.searchParams.get('group_by_country') === 'true';
     const useBalancer = url.searchParams.get('use_balancer') === 'true';
-    let lang = url.searchParams.get('lang') || 'zh-CN';
-    let userAgent = url.searchParams.get('ua') || 'curl/7.74.0';
-    if (!inputString) return new Response(t('missingConfig'), { status: 400 });
-    if (PREDEFINED_RULE_SETS[selectedRules]) {
-      selectedRules = PREDEFINED_RULE_SETS[selectedRules];
-    } else {
-      try { selectedRules = JSON.parse(decodeURIComponent(selectedRules)); } catch { selectedRules = PREDEFINED_RULE_SETS.minimal; }
-    }
-    try { customRules = JSON.parse(decodeURIComponent(customRules)); } catch { customRules = []; }
-    const builder = new XrayConfigBuilder(inputString, selectedRules, customRules, undefined, lang, userAgent, groupByCountry, { useBalancer });
-    const cfg = await builder.build();
-    return new Response(JSON.stringify(cfg, null, 2), { headers: { 'content-type': 'application/json; charset=utf-8' } });
+    return handleConfig(request, XrayConfigBuilder, 'json', { useBalancer });
 }
 
 export async function handleXraySubscription({ request }) {
     const url = new URL(request.url);
     const inputString = url.searchParams.get('config');
     if (!inputString) {
-      return new Response('Missing config parameter', { status: 400 });
+        return new Response('Missing config parameter', { status: 400 });
     }
 
     const proxylist = inputString.split('\n');
@@ -121,33 +112,33 @@ export async function handleXraySubscription({ request }) {
     const headers = new Headers({ 'User-Agent': userAgent });
 
     for (const proxy of proxylist) {
-      const trimmedProxy = proxy.trim();
-      if (!trimmedProxy) continue;
+        const trimmedProxy = proxy.trim();
+        if (!trimmedProxy) continue;
 
-      if (trimmedProxy.startsWith('http://') || trimmedProxy.startsWith('https://')) {
-        try {
-          const response = await fetch(trimmedProxy, { method: 'GET', headers });
-          const text = await response.text();
-          let processed = tryDecodeSubscriptionLines(text, { decodeUriComponent: true });
-          if (!Array.isArray(processed)) processed = [processed];
-          finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
-        } catch (e) {
-          console.warn('Failed to fetch the proxy:', e);
+        if (trimmedProxy.startsWith('http://') || trimmedProxy.startsWith('https://')) {
+            try {
+                const response = await fetch(trimmedProxy, { method: 'GET', headers });
+                const text = await response.text();
+                let processed = tryDecodeSubscriptionLines(text, { decodeUriComponent: true });
+                if (!Array.isArray(processed)) processed = [processed];
+                finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
+            } catch (e) {
+                console.warn('Failed to fetch the proxy:', e);
+            }
+        } else {
+            let processed = tryDecodeSubscriptionLines(trimmedProxy);
+            if (!Array.isArray(processed)) processed = [processed];
+            finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
         }
-      } else {
-        let processed = tryDecodeSubscriptionLines(trimmedProxy);
-        if (!Array.isArray(processed)) processed = [processed];
-        finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
-      }
     }
 
     const finalString = finalProxyList.join('\n');
     if (!finalString) {
-      return new Response('Missing config parameter', { status: 400 });
+        return new Response('Missing config parameter', { status: 400 });
     }
 
     return new Response(encodeBase64(finalString), {
-      headers: { 'content-type': 'application/json; charset=utf-8' }
+        headers: { 'content-type': 'application/json; charset=utf-8' }
     });
 }
 
@@ -187,7 +178,7 @@ export async function handleRedirect({ url, params }) {
     if (originalParam === null) {
         return new Response(t('shortUrlNotFound'), { status: 404 });
     }
-    const targetMap = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge' };
+    const targetMap = { b: 'singbox', c: 'clash', x: 'sub', s: 'surge' };
     const originalUrl = `${url.origin}/${targetMap[type]}${originalParam}`;
     return Response.redirect(originalUrl, 302);
 }
@@ -236,7 +227,7 @@ export async function handleResolve({ url }) {
         if (originalParam === null) {
             return new Response(t('shortUrlNotFound'), { status: 404 });
         }
-        const targetMap = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge' };
+        const targetMap = { b: 'singbox', c: 'clash', x: 'sub', s: 'surge' };
         const originalUrl = `${url.origin}/${targetMap[prefix]}${originalParam}`;
         return new Response(JSON.stringify({ originalUrl }), {
             headers: { 'Content-Type': 'application/json' }

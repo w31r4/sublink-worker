@@ -88,12 +88,17 @@ export class VmessParser {
 
       const tlsEnabled = vmessConfig.tls && vmessConfig.tls !== 'none';
       const tls = tlsEnabled ? {
+        enabled: true,
         sni: vmessConfig.sni,
+        server_name: vmessConfig.sni,
         insecure: vmessConfig['skip-cert-verify'] || false,
       } : undefined;
 
       const transport = createTransport(vmessConfig);
       const tag = tagOverride || vmessConfig.ps;
+      const tcpFastOpen = typeof vmessConfig['fast-open'] !== 'undefined'
+        ? !!vmessConfig['fast-open']
+        : undefined;
 
       return createVmessNode({
         host: vmessConfig.add,
@@ -105,6 +110,7 @@ export class VmessParser {
         transport: transport,
         tls: tls,
         tags: tag ? [tag] : [],
+        tcp_fast_open: tcpFastOpen,
       });
     } catch (e) {
       console.error('Failed to parse vmess URL:', e);

@@ -32,6 +32,7 @@ export class AnytlsParser {
     const tls = {
       enabled: true,
       server_name: params.sni || params.host,
+      sni: params.sni || params.host,
       ...(tlsInsecure !== undefined ? { insecure: tlsInsecure } : {})
     };
     const alpn = parseArray(params.alpn);
@@ -51,11 +52,16 @@ export class AnytlsParser {
       password,
       tls,
       udp: parseBool(params.udp),
-      'idle-session-check-interval': parseMaybeNumber(params['idle-session-check-interval'] || params.idleSessionCheckInterval || params.idle_session_check_interval),
-      'idle-session-timeout': parseMaybeNumber(params['idle-session-timeout'] || params.idleSessionTimeout || params.idle_session_timeout),
-      'min-idle-session': parseMaybeNumber(params['min-idle-session'] || params.minIdleSession || params.min_idle_session),
+      idle_session_check_interval: parseMaybeNumber(
+        params['idle-session-check-interval'] || params.idleSessionCheckInterval || params.idle_session_check_interval
+      ),
+      idle_session_timeout: parseMaybeNumber(
+        params['idle-session-timeout'] || params.idleSessionTimeout || params.idle_session_timeout
+      ),
+      min_idle_session: parseMaybeNumber(
+        params['min-idle-session'] || params.minIdleSession || params.min_idle_session
+      ),
       tags: name ? [name] : [],
     });
   }
 }
-

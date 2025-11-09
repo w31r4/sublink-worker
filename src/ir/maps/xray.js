@@ -1,8 +1,11 @@
 export function mapIRToXray(ir, original) {
   if (!ir) return null;
+  const auth = original?.auth || ir.auth || {};
+  const transport = original?.transport || ir.transport;
+  const tls = original?.tls || ir.tls;
   const host = ir.host;
   const port = ir.port;
-  const stream = buildStreamSettings(ir, original);
+  const stream = buildStreamSettings(ir, transport, tls);
 
   switch (ir.kind) {
     case 'vmess':
@@ -10,7 +13,7 @@ export function mapIRToXray(ir, original) {
         protocol: 'vmess',
         tag: ir.tags?.[0] || 'proxy',
         settings: {
-          vnext: [{ address: host, port, users: [{ id: original?.uuid || ir.auth?.uuid, security: original?.security || 'auto' }] }]
+          vnext: [{ address: host, port, users: [{ id: auth.uuid, security: auth.method || 'auto' }] }]
         },
         ...(stream ? { streamSettings: stream } : {})
       };
@@ -19,7 +22,7 @@ export function mapIRToXray(ir, original) {
         protocol: 'vless',
         tag: ir.tags?.[0] || 'proxy',
         settings: {
-          vnext: [{ address: host, port, users: [{ id: original?.uuid || ir.auth?.uuid, encryption: 'none', flow: original?.flow }] }]
+          vnext: [{ address: host, port, users: [{ id: auth.uuid, encryption: 'none', flow: ir.flow }] }]
         },
         ...(stream ? { streamSettings: stream } : {})
       };
@@ -27,30 +30,29 @@ export function mapIRToXray(ir, original) {
       return {
         protocol: 'trojan',
         tag: ir.tags?.[0] || 'proxy',
-        settings: { servers: [{ address: host, port, password: original?.password || ir.auth?.password, sni: ir.tls?.sni }] },
+        settings: { servers: [{ address: host, port, password: auth.password, sni: tls?.sni }] },
         ...(stream ? { streamSettings: stream } : {})
       };
     case 'shadowsocks':
       return {
         protocol: 'shadowsocks',
         tag: ir.tags?.[0] || 'proxy',
-        settings: { servers: [{ address: host, port, method: original?.method, password: original?.password }] }
+        settings: { servers: [{ address: host, port, method: auth.method, password: auth.password }] }
       };
     default:
       return null;
   }
 }
 
-function buildStreamSettings(ir, original) {
-  const network = original?.transport?.type || original?.network || 'tcp';
-  const tls = ir.tls;
+function buildStreamSettings(ir, transport, tls) {
+  const network = transport?.type || ir.network || 'tcp';
   const stream = { network };
   if (network === 'ws') {
-    stream.wsSettings = { path: original?.transport?.path, headers: original?.transport?.headers };
+    stream.wsSettings = { path: transport?.path, headers: transport?.headers };
   } else if (network === 'grpc') {
-    stream.grpcSettings = { serviceName: original?.transport?.service_name };
+    stream.grpcSettings = { serviceName: transport?.service_name };
   } else if (network === 'http' || network === 'h2') {
-    stream.httpSettings = { path: original?.transport?.path, host: original?.transport?.host };
+    stream.httpSettings = { path: transport?.path, host: transport?.host };
   }
   if (tls) {
     if (tls.reality) {
@@ -65,7 +67,7 @@ function buildStreamSettings(ir, original) {
       stream.security = 'tls';
       stream.tlsSettings = {
         serverName: tls.sni,
-        allowInsecure: !!original?.tls?.insecure,
+        allowInsecure: !!tls.insecure,
         ...(Array.isArray(tls.alpn) ? { alpn: tls.alpn } : {})
       };
     }
