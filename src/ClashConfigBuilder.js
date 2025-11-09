@@ -6,6 +6,7 @@ import { toIR } from './ir/convert.js';
 import { mapIRToClash } from './ir/maps/clash.js';
 import { downgradeByCaps } from './ir/core.js';
 import { t } from './i18n/index.js';
+import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry) {
@@ -254,40 +255,25 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         const nodeName = t('outboundNames.Node Select');
         const exists = this.config['proxy-groups'].some(g => g && normalize(g.name) === normalize(nodeName));
         if (exists) return;
-        const list = [
-            'DIRECT',
-            'REJECT',
-            t('outboundNames.Auto Select'),
-            ...proxyList
-        ];
+        const members = buildNodeSelectMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
+        });
         this.config['proxy-groups'].unshift({
-            type: "select",
+            type: 'select',
             name: nodeName,
-            proxies: list
+            proxies: members
         });
     }
 
     buildSelectGroupMembers(proxyList = []) {
-        const normalize = (s) => typeof s === 'string' ? s.trim() : s;
-        const directReject = ['DIRECT', 'REJECT'];
-        const base = this.groupByCountry
-            ? [
-                t('outboundNames.Node Select'),
-                t('outboundNames.Auto Select'),
-                ...(this.manualGroupName ? [this.manualGroupName] : []),
-                ...((this.countryGroupNames || []))
-              ]
-            : [
-                t('outboundNames.Node Select'),
-                ...proxyList
-              ];
-        const combined = [...directReject, ...base].filter(Boolean);
-        const seen = new Set();
-        return combined.filter(name => {
-            const key = normalize(name);
-            if (!key || seen.has(key)) return false;
-            seen.add(key);
-            return true;
+        return buildAggregatedMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
         });
     }
 
@@ -395,18 +381,11 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
 
         const nodeSelectGroup = this.config['proxy-groups'].find(g => g && g.name === t('outboundNames.Node Select'));
         if (nodeSelectGroup && Array.isArray(nodeSelectGroup.proxies)) {
-            const seen = new Set();
-            const rebuilt = [
-                'DIRECT',
-                'REJECT',
-                t('outboundNames.Auto Select'),
-                ...(manualGroupName ? [manualGroupName] : []),
-                ...countryGroupNames
-            ].filter(Boolean);
-            nodeSelectGroup.proxies = rebuilt.filter(name => {
-                if (seen.has(name)) return false;
-                seen.add(name);
-                return true;
+            nodeSelectGroup.proxies = buildNodeSelectMembers({
+                groupByCountry: this.groupByCountry,
+                manualGroupName,
+                countryGroupNames,
+                proxyList: this.getProxyList()
             });
         }
         this.countryGroupNames = countryGroupNames;

@@ -4,6 +4,7 @@ import { DeepCopy, parseCountryFromNodeName } from './utils.js';
 import { toIR } from './ir/convert.js';
 import { mapIRToSingbox } from './ir/maps/singbox.js';
 import { downgradeByCaps } from './ir/core.js';
+import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 import { t } from './i18n/index.js';
 
 export class SingboxConfigBuilder extends BaseConfigBuilder {
@@ -71,34 +72,25 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     addNodeSelectGroup(proxyList) {
-        proxyList.unshift('DIRECT', 'REJECT', t('outboundNames.Auto Select'));
+        const members = buildNodeSelectMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
+        });
         this.config.outbounds.unshift({
-            type: "selector",
+            type: 'selector',
             tag: t('outboundNames.Node Select'),
-            outbounds: proxyList
+            outbounds: members
         });
     }
 
     buildSelectorMembers(proxyList = []) {
-        const normalize = (s) => typeof s === 'string' ? s.trim() : s;
-        const base = this.groupByCountry
-            ? [
-                t('outboundNames.Node Select'),
-                t('outboundNames.Auto Select'),
-                ...(this.manualGroupName ? [this.manualGroupName] : []),
-                ...(this.countryGroupNames || [])
-              ]
-            : [
-                t('outboundNames.Node Select'),
-                ...proxyList
-              ];
-        const combined = ['DIRECT', 'REJECT', ...base].filter(Boolean);
-        const seen = new Set();
-        return combined.filter(name => {
-            const key = normalize(name);
-            if (!key || seen.has(key)) return false;
-            seen.add(key);
-            return true;
+        return buildAggregatedMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
         });
     }
 
@@ -193,18 +185,11 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         const nodeSelectTag = t('outboundNames.Node Select');
         const nodeSelectGroup = this.config.outbounds.find(o => normalize(o?.tag) === normalize(nodeSelectTag));
         if (nodeSelectGroup && Array.isArray(nodeSelectGroup.outbounds)) {
-            const seen = new Set();
-            const rebuilt = [
-                'DIRECT',
-                'REJECT',
-                t('outboundNames.Auto Select'),
-                ...(manualGroupName ? [manualGroupName] : []),
-                ...countryGroupNames
-            ].filter(Boolean);
-            nodeSelectGroup.outbounds = rebuilt.filter(name => {
-                if (seen.has(name)) return false;
-                seen.add(name);
-                return true;
+            nodeSelectGroup.outbounds = buildNodeSelectMembers({
+                groupByCountry: this.groupByCountry,
+                manualGroupName,
+                countryGroupNames,
+                proxyList: this.getProxyList()
             });
         }
 

@@ -2,6 +2,7 @@ import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { parseCountryFromNodeName } from './utils.js';
 import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, generateRules, getOutbounds, PREDEFINED_RULE_SETS } from './config.js';
 import { t } from './i18n/index.js';
+import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry) {
@@ -174,34 +175,26 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     }
 
     buildNodeSelectOptions(proxyList = []) {
-        return this.withDirectReject([
-            t('outboundNames.Auto Select'),
-            ...proxyList
-        ]);
+        const members = buildNodeSelectMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
+        });
+        return this.sanitizeOptions(members);
     }
 
     buildAggregatedOptions(proxyList = []) {
-        const base = this.groupByCountry
-            ? [
-                t('outboundNames.Node Select'),
-                t('outboundNames.Auto Select'),
-                ...(this.manualGroupName ? [this.manualGroupName] : []),
-                ...((this.countryGroupNames || []))
-              ]
-            : [
-                t('outboundNames.Node Select'),
-                ...proxyList
-              ];
-        return this.withDirectReject(base);
+        const members = buildAggregatedMembers({
+            groupByCountry: this.groupByCountry,
+            manualGroupName: this.manualGroupName,
+            countryGroupNames: this.countryGroupNames,
+            proxyList
+        });
+        return this.sanitizeOptions(members);
     }
 
-    withDirectReject(options = []) {
-        return this.sanitizeOptions([
-            'DIRECT',
-            'REJECT',
-            ...options
-        ]);
-    }
+    withDirectReject(options = []) { return this.sanitizeOptions(options); }
 
     addAutoSelectGroup(proxyList) {
         this.config['proxy-groups'] = this.config['proxy-groups'] || [];
