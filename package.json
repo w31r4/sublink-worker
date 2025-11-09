@@ -6,7 +6,7 @@
     "deploy": "npm run setup-kv && wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "test": "vitest",
+    "test": "WRANGLER_LOG=stdout vitest",
     "setup-kv": "node scripts/setup-kv.js"
   },
   "devDependencies": {

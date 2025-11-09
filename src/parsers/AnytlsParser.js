@@ -1,5 +1,6 @@
 import { parseUrlParams, parseServerInfo } from './url.js';
 import { parseBool, parseMaybeNumber, parseArray } from '../utils.js';
+import { createAnytlsNode } from '../ir/factory.js';
 
 export class AnytlsParser {
   canParse(url) {
@@ -44,18 +45,17 @@ export class AnytlsParser {
       };
     }
 
-    return {
-      type: 'anytls',
-      tag: name,
-      server: host,
-      server_port: port,
-      password: password,
+    return createAnytlsNode({
+      host,
+      port,
+      password,
+      tls,
       udp: parseBool(params.udp),
       'idle-session-check-interval': parseMaybeNumber(params['idle-session-check-interval'] || params.idleSessionCheckInterval || params.idle_session_check_interval),
       'idle-session-timeout': parseMaybeNumber(params['idle-session-timeout'] || params.idleSessionTimeout || params.idle_session_timeout),
       'min-idle-session': parseMaybeNumber(params['min-idle-session'] || params.minIdleSession || params.min_idle_session),
-      tls
-    };
+      tags: name ? [name] : [],
+    });
   }
 }
 

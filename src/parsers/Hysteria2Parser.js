@@ -1,5 +1,6 @@
 import { parseUrlParams, parseServerInfo, createTlsConfig } from './url.js';
 import { parseMaybeNumber, parseArray, parseBool } from '../utils.js';
+import { createHysteria2Node } from '../ir/factory.js';
 
 export class Hysteria2Parser {
   canParse(url) {
@@ -35,23 +36,17 @@ export class Hysteria2Parser {
 
     const hopInterval = parseMaybeNumber(params['hop-interval']);
 
-    return {
-      tag: name,
-      type: 'hysteria2',
-      server: host,
-      server_port: port,
-      password: password,
-      tls: tls,
+    return createHysteria2Node({
+      host,
+      port,
+      password,
+      tls,
       obfs: Object.keys(obfs).length > 0 ? obfs : undefined,
       auth: params.auth,
-      recv_window_conn: params.recv_window_conn,
       up: params.up ?? (params.upmbps ? parseMaybeNumber(params.upmbps) : undefined),
       down: params.down ?? (params.downmbps ? parseMaybeNumber(params.downmbps) : undefined),
-      ports: params.ports,
-      hop_interval: hopInterval,
-      alpn: parseArray(params.alpn),
-      fast_open: parseBool(params['fast-open'])
-    };
+      tags: name ? [name] : [],
+    });
   }
 }
 

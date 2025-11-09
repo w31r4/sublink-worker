@@ -1,7 +1,6 @@
 import { SING_BOX_CONFIG, generateRuleSets, generateRules, getOutbounds, PREDEFINED_RULE_SETS} from './config.js';
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { DeepCopy, parseCountryFromNodeName } from './utils.js';
-import { toIR } from './ir/convert.js';
 import { mapIRToSingbox } from './ir/maps/singbox.js';
 import { downgradeByCaps } from './ir/core.js';
 import { buildAggregatedMembers, buildNodeSelectMembers } from './groupHelpers.js';
@@ -32,11 +31,12 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
 
     convertProxy(proxy) {
         try {
-            const ir = toIR(proxy);
-            const mapped = mapIRToSingbox(downgradeByCaps(ir, 'singbox'), proxy);
+            const mapped = mapIRToSingbox(downgradeByCaps(proxy, 'singbox'));
             if (mapped) return mapped;
-        } catch (_) {}
-        return proxy;
+        } catch (e) {
+            console.error(`Failed to map IR to Singbox config for proxy: ${proxy.tags?.[0]}`, e);
+        }
+        return null;
     }
 
     addProxyToConfig(proxy) {

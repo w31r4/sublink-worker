@@ -1,5 +1,6 @@
 import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from './url.js';
 import { parseArray } from '../utils.js';
+import { createVlessNode } from '../ir/factory.js';
 
 export class VlessParser {
   canParse(url) {
@@ -20,18 +21,15 @@ export class VlessParser {
     }
     const transport = params.type !== 'tcp' ? createTransportConfig(params) : undefined;
 
-    return {
-      type: 'vless',
-      tag: name,
-      server: host,
-      server_port: port,
+    return createVlessNode({
+      host,
+      port,
       uuid: decodeURIComponent(uuid),
-      tcp_fast_open: false,
       tls,
       transport,
-      network: 'tcp',
+      network: transport?.type || 'tcp',
       flow: params.flow ?? undefined,
-      alpn: parseArray(params.alpn)
-    };
+      tags: name ? [name] : [],
+    });
   }
 }

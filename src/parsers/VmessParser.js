@@ -1,4 +1,5 @@
 import { decodeBase64 } from '../utils.js';
+import { createVmessNode } from '../ir/factory.js';
 
 const normalizeToArray = (value) => {
   if (!value) return undefined;
@@ -87,26 +88,24 @@ export class VmessParser {
 
       const tlsEnabled = vmessConfig.tls && vmessConfig.tls !== 'none';
       const tls = tlsEnabled ? {
-        enabled: true,
-        server_name: vmessConfig.sni,
+        sni: vmessConfig.sni,
         insecure: vmessConfig['skip-cert-verify'] || false,
       } : undefined;
 
       const transport = createTransport(vmessConfig);
+      const tag = tagOverride || vmessConfig.ps;
 
-      return {
-        tag: tagOverride || vmessConfig.ps,
-        type: "vmess",
-        server: vmessConfig.add,
-        server_port: parseInt(vmessConfig.port),
+      return createVmessNode({
+        host: vmessConfig.add,
+        port: vmessConfig.port,
         uuid: vmessConfig.id,
-        alter_id: parseInt(vmessConfig.aid),
-        security: vmessConfig.scy || "auto",
-        network: transport?.type || vmessConfig.net || "tcp",
-        tcp_fast_open: false,
+        alter_id: vmessConfig.aid ? parseInt(vmessConfig.aid) : undefined,
+        security: vmessConfig.scy || 'auto',
+        network: transport?.type || vmessConfig.net || 'tcp',
         transport: transport,
         tls: tls,
-      };
+        tags: tag ? [tag] : [],
+      });
     } catch (e) {
       console.error('Failed to parse vmess URL:', e);
       return null;

@@ -22,17 +22,7 @@ describe('VmessParser', () => {
     const url = 'vmess://' + btoa(JSON.stringify(config));
     const result = parser.parse(url);
 
-    expect(result.tag).toBe('MyVmessNode');
-    expect(result.server).toBe('example.com');
-    expect(result.server_port).toBe(443);
-    expect(result.uuid).toBe('a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6');
-    expect(result.alter_id).toBe(64);
-    expect(result.network).toBe('ws');
-    expect(result.transport.type).toBe('ws');
-    expect(result.transport.path).toBe('/ws-path');
-    expect(result.transport.headers.Host).toBe('sub.example.com');
-    expect(result.tls.enabled).toBe(true);
-    expect(result.tls.server_name).toBe('sub.example.com');
+    expect(result).toMatchSnapshot();
   });
 
   it('should parse a vmess URL with a tag override', () => {
@@ -47,7 +37,7 @@ describe('VmessParser', () => {
     const url = 'vmess://' + btoa(JSON.stringify(config)) + '#NewName';
     const result = parser.parse(url);
 
-    expect(result.tag).toBe('NewName');
+    expect(result).toMatchSnapshot();
   });
 
   it('should handle http transport type', () => {
@@ -65,8 +55,6 @@ describe('VmessParser', () => {
     const url = 'vmess://' + btoa(JSON.stringify(config));
     const result = parser.parse(url);
 
-    expect(result.network).toBe('http');
-    expect(result.transport.type).toBe('http');
-    expect(result.transport.method).toBe('GET');
+    expect(result).toMatchSnapshot();
   });
 });

@@ -1,5 +1,6 @@
 import { decodeBase64 } from '../utils.js';
 import { parseUrlParams, parseServerInfo } from './url.js';
+import { createShadowsocksNode } from '../ir/factory.js';
 
 export class ShadowsocksParser {
   canParse(url) {
@@ -17,7 +18,13 @@ export class ShadowsocksParser {
         const [method, ...passwordParts] = decodedUserInfo.split(':');
         const password = passwordParts.join(':');
         const { host, port } = parseServerInfo(serverInfo);
-        return this.createConfig(tag, host, port, method, password);
+        return createShadowsocksNode({
+          host,
+          port,
+          method,
+          password,
+          tags: tag ? [tag] : [],
+        });
       }
       
       // Legacy format: ss://<base64-encoded-full-info>
@@ -26,24 +33,17 @@ export class ShadowsocksParser {
       const [method, ...passwordParts] = methodAndPass.split(':');
       const password = passwordParts.join(':');
       const { host, port } = parseServerInfo(serverInfo);
-      return this.createConfig(tag, host, port, method, password);
+      return createShadowsocksNode({
+        host,
+        port,
+        method,
+        password,
+        tags: tag ? [tag] : [],
+      });
 
     } catch (e) {
       console.error('Failed to parse shadowsocks URL:', e);
       return null;
     }
-  }
-
-  createConfig(tag, server, server_port, method, password) {
-    return {
-      tag: tag || "Shadowsocks",
-      type: 'shadowsocks',
-      server: server,
-      server_port: parseInt(server_port),
-      method: method,
-      password: password,
-      network: 'tcp',
-      tcp_fast_open: false,
-    };
   }
 }

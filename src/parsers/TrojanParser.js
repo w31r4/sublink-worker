@@ -1,4 +1,5 @@
 import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from './url.js';
+import { createTrojanNode } from '../ir/factory.js';
 
 export class TrojanParser {
   canParse(url) {
@@ -11,21 +12,19 @@ export class TrojanParser {
       const [password, serverInfo] = addressPart.split('@');
       const { host, port } = parseServerInfo(serverInfo);
 
-      const parsedURL = parseServerInfo(addressPart);
       const tls = createTlsConfig(params);
       const transport = params.type !== 'tcp' ? createTransportConfig(params) : undefined;
-      return {
-        type: 'trojan',
-        tag: name,
-        server: host,
-        server_port: port,
-        password: decodeURIComponent(password) || parsedURL.username,
-        network: "tcp",
-        tcp_fast_open: false,
-        tls: tls,
-        transport: transport,
-        flow: params.flow ?? undefined
-      };
+      
+      return createTrojanNode({
+        host,
+        port,
+        password: decodeURIComponent(password),
+        tls,
+        transport,
+        network: transport?.type || 'tcp',
+        flow: params.flow ?? undefined,
+        tags: name ? [name] : [],
+      });
     } catch (e) {
       console.error('Failed to parse trojan URL:', e);
       return null;

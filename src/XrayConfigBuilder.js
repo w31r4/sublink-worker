@@ -1,5 +1,4 @@
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
-import { toIR } from './ir/convert.js';
 import { downgradeByCaps } from './ir/core.js';
 import { mapIRToXray } from './ir/maps/xray.js';
 import { generateRules } from './config.js';
