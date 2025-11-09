@@ -13,9 +13,14 @@ export function checkStartsWith(str, prefix) {
 
 // Base64 编码函数 (使用原生 btoa)
 export function encodeBase64(input) {
-	// 首先将字符串通过 TextEncoder 转为 UTF-8 编码的字节，然后将每个字节转为字符
+	// 将字符串通过 TextEncoder 转为 UTF-8 编码的字节，分块拼接以避免调用栈溢出
 	const utf8Bytes = new TextEncoder().encode(input);
-	const binaryString = String.fromCodePoint(...utf8Bytes);
+	let binaryString = '';
+	const chunkSize = 0x8000;
+	for (let i = 0; i < utf8Bytes.length; i += chunkSize) {
+		const chunk = utf8Bytes.subarray(i, i + chunkSize);
+		binaryString += String.fromCharCode(...chunk);
+	}
 	return btoa(binaryString);
 }
 

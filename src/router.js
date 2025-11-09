@@ -4,8 +4,13 @@ export class Router {
   }
 
   on(method, path, handler) {
-    const regex = new RegExp(`^${path.replace(/:\w+/g, '([^/]+)')}$`);
-    this.routes.push({ method, path, regex, handler });
+    const paramNames = [];
+    const pattern = path.replace(/:([A-Za-z0-9_]+)(\([^/]+\))?/g, (_, name, customPattern) => {
+      paramNames.push(name);
+      return customPattern ? customPattern : '([^/]+)';
+    });
+    const regex = new RegExp(`^${pattern}$`);
+    this.routes.push({ method, regex, handler, paramNames });
     return this;
   }
 
@@ -18,9 +23,8 @@ export class Router {
       const match = url.pathname.match(route.regex);
       if (match) {
         const params = {};
-        const keys = (route.path.match(/:\w+/g) || []).map(key => key.substring(1));
-        keys.forEach((key, i) => {
-          params[key] = match[i + 1];
+        route.paramNames.forEach((name, index) => {
+          params[name] = match[index + 1];
         });
         return await route.handler({ request, url, params });
       }

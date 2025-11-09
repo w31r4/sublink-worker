@@ -26,6 +26,13 @@ describe('utils.js', () => {
         expect(encoded).toBe('');
         expect(decoded).toBe('');
     });
+
+    it('should handle large strings without overflowing the stack', () => {
+      const original = 'node'.repeat(60000);
+      const encoded = encodeBase64(original);
+      const decoded = decodeBase64(encoded);
+      expect(decoded).toBe(original);
+    });
   });
 
   describe('tryDecodeSubscriptionLines', () => {
