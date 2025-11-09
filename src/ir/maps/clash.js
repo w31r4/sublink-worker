@@ -46,6 +46,70 @@ export function mapIRToClash(ir, original) {
     return out;
   }
 
+  if (ir.kind === 'vless') {
+    const out = {
+      ...base,
+      type: 'vless',
+      uuid: original?.uuid || ir.auth?.uuid,
+      cipher: original?.security,
+      tls: original?.tls?.enabled || !!ir.tls,
+      'client-fingerprint': ir.tls?.utls?.fingerprint,
+      servername: ir.tls?.sni || original?.tls?.server_name || '',
+      network: original?.transport?.type || original?.network || 'tcp',
+      tfo: original?.tcp_fast_open,
+      'skip-cert-verify': original?.tls?.insecure ? true : false,
+      ...(typeof original?.udp !== 'undefined' ? { udp: original.udp } : {}),
+      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
+      ...(original?.packet_encoding ? { 'packet-encoding': original.packet_encoding } : {}),
+      ...(original?.flow ? { flow: original.flow } : {}),
+    };
+    if (original?.transport?.type === 'ws') {
+      out['ws-opts'] = { path: original.transport.path, headers: original.transport.headers };
+    } else if (original?.transport?.type === 'grpc') {
+      out['grpc-opts'] = { 'grpc-service-name': original.transport.service_name };
+    } else if (original?.transport?.type === 'http') {
+      const opts = {
+        method: original.transport.method || 'GET',
+        path: Array.isArray(original.transport.path) ? original.transport.path : [original.transport.path || '/'],
+      };
+      if (original.transport.headers && Object.keys(original.transport.headers).length > 0) {
+        opts.headers = original.transport.headers;
+      }
+      out['http-opts'] = opts;
+    } else if (original?.transport?.type === 'h2') {
+      out['h2-opts'] = { path: original.transport.path, host: original.transport.host };
+    }
+    if (original?.tls?.reality?.enabled) {
+      out['reality-opts'] = {
+        'public-key': original.tls.reality.public_key,
+        'short-id': original.tls.reality.short_id,
+      };
+    }
+    return out;
+  }
+
+  if (ir.kind === 'hysteria2' || ir.kind === 'hy2') {
+    const p = ir.proto?.hy2 || {};
+    const out = {
+      ...base,
+      type: 'hysteria2',
+      ...(original?.ports ? { ports: original.ports } : {}),
+      obfs: original?.obfs?.type || p.obfs?.type,
+      'obfs-password': original?.obfs?.password || p.obfs?.password,
+      password: original?.password || ir.auth?.password,
+      auth: original?.auth || p.auth,
+      up: original?.up || p.up,
+      down: original?.down || p.down,
+      'recv-window-conn': original?.recv_window_conn || p.recv_window_conn,
+      sni: ir.tls?.sni || original?.tls?.server_name || '',
+      'skip-cert-verify': original?.tls?.insecure ? true : false,
+      ...(typeof p.hop_interval !== 'undefined' ? { 'hop-interval': p.hop_interval } : {}),
+      ...(Array.isArray(ir.tls?.alpn) ? { alpn: ir.tls.alpn } : {}),
+      ...(typeof p.fast_open !== 'undefined' ? { 'fast-open': p.fast_open } : {}),
+    };
+    return out;
+  }
+
   // Not implemented here → let builder fallback handle
   return null;
 }

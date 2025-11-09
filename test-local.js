@@ -7,6 +7,7 @@ const yaml = require('js-yaml');
 const projectRoot = path.resolve(__dirname);
 const baseConfigPath = path.join(projectRoot, 'src', 'BaseConfigBuilder.js');
 const clashBuilderPath = path.join(projectRoot, 'src', 'ClashConfigBuilder.js');
+const singboxBuilderPath = path.join(projectRoot, 'src', 'SingboxConfigBuilder.js');
 const testCasesPath = path.join(projectRoot, 'test-cases.yaml');
 const i18nPath = path.join(projectRoot, 'src', 'i18n', 'index.js');
 
@@ -14,6 +15,7 @@ console.log('🔧 修复模块导入路径:', baseConfigPath);
 
 let BaseConfigBuilder;
 let ClashConfigBuilder;
+let SingboxConfigBuilder;
 let i18nModule;
 async function ensureModuleLoaded() {
     if (!BaseConfigBuilder) {
@@ -28,6 +30,13 @@ async function ensureModuleLoaded() {
         ClashConfigBuilder = module.ClashConfigBuilder;
         if (!ClashConfigBuilder) {
             throw new Error('ClashConfigBuilder 模块未导出');
+        }
+    }
+    if (!SingboxConfigBuilder) {
+        const module = await import(pathToFileURL(singboxBuilderPath).href);
+        SingboxConfigBuilder = module.SingboxConfigBuilder;
+        if (!SingboxConfigBuilder) {
+            throw new Error('SingboxConfigBuilder 模块未导出');
         }
     }
 }
@@ -51,6 +60,12 @@ function loadTestCases() {
         throw new Error('测试用例文件格式错误，应包含 tests 数组');
     }
     return parsed.tests;
+}
+
+function loadGoldenCases() {
+    const rawContent = fs.readFileSync(testCasesPath, 'utf8');
+    const parsed = yaml.load(rawContent, { json: true }) || {};
+    return Array.isArray(parsed.golden) ? parsed.golden : [];
 }
 
 function evaluateResult(items, builder, expected) {
@@ -182,6 +197,21 @@ async function runAllTests() {
     // 附加：构建级 Clash 配置输出测试（验证 proxy-groups 清理与去重）
     await runClashOutputTest();
     await runCountryGroupTest();
+
+    // 黄金样例（IR 映射 -> 目标配置）
+    const golden = loadGoldenCases();
+    if (golden.length > 0) {
+        console.log('\n🧪 运行黄金样例（构建器映射）');
+        let okCount = 0;
+        for (const g of golden) {
+            const ok = await runGolden(g);
+            if (ok) okCount++;
+        }
+        console.log(`\n📊 黄金样例结果: ${okCount}/${golden.length} 通过`);
+        if (okCount !== golden.length) {
+            console.log('⚠️  黄金样例有失败项，请检查 IR 映射');
+        }
+    }
 }
 
 // 执行测试
@@ -324,5 +354,61 @@ vmess://ewogICJ2IjogIjIiLAogICJwcyI6ICJ0dzEubm9kZS5jb20iLAogICJhZGQiOiAidHcxLm5v
     } catch (e) {
         console.error('❌ 按国家分组测试失败:', e.message);
         console.error(e.stack);
+    }
+}
+
+async function runGolden(g) {
+    try {
+        console.log(`\n🧪 黄金样例: ${g.name} [${g.target}]`);
+        const input = g.input;
+        let builder;
+        if (g.target === 'clash') {
+            builder = new ClashConfigBuilder(input, 'minimal', [], undefined, 'zh-CN', 'test-agent', false);
+        } else if (g.target === 'singbox') {
+            builder = new SingboxConfigBuilder(input, 'minimal', [], undefined, 'zh-CN', 'test-agent', false);
+        } else {
+            console.log(`未知目标: ${g.target}`);
+            return false;
+        }
+        const built = await builder.build();
+        if (g.target === 'clash') {
+            const obj = yaml.load(built);
+            const exp = g.expects || {};
+            if (exp.proxyByName) {
+                const name = exp.proxyByName.name;
+                const p = (obj.proxies || []).find(x => x && x.name === name);
+                if (!p) {
+                    console.log(`❌ 未找到 Clash 代理: ${name}`);
+                    return false;
+                }
+                for (const [k, v] of Object.entries(exp.proxyByName.fields || {})) {
+                    if (JSON.stringify(p[k]) !== JSON.stringify(v)) {
+                        console.log(`❌ 字段不匹配 [${k}] 预期 ${JSON.stringify(v)} 实际 ${JSON.stringify(p[k])}`);
+                        return false;
+                    }
+                }
+            }
+        } else if (g.target === 'singbox') {
+            const exp = g.expects || {};
+            if (exp.outboundByTag) {
+                const tag = exp.outboundByTag.tag;
+                const o = (built.outbounds || []).find(x => x && x.tag === tag);
+                if (!o) {
+                    console.log(`❌ 未找到 SingBox 出站: ${tag}`);
+                    return false;
+                }
+                for (const [k, v] of Object.entries(exp.outboundByTag.fields || {})) {
+                    if (JSON.stringify(o[k]) !== JSON.stringify(v)) {
+                        console.log(`❌ 字段不匹配 [${k}] 预期 ${JSON.stringify(v)} 实际 ${JSON.stringify(o[k])}`);
+                        return false;
+                    }
+                }
+            }
+        }
+        console.log('✅ 通过');
+        return true;
+    } catch (e) {
+        console.error('❌ 黄金样例运行失败:', e.message);
+        return false;
     }
 }
