@@ -1,5 +1,13 @@
 # 更新日志
 
+# 更新日志
+
+## 2025-11-09
+
+- Parser → IR → Builder 重构：所有解析器产出统一 IR，Clash/Singbox/Surge/Xray Builder 只消费 IR
+- 新增 Surge Builder，补全 TUIC/Hysteria2/Anytls 等协议在各客户端的映射
+- 添加 `docs/ARCHITECTURE.md`、`docs/MAINTENANCE.md` 并更新 API/README 文档
+
 ## 2025-09-28
 
 - 修复singbox 1.12.0中部分配置造成警告的问题

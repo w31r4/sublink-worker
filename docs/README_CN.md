@@ -31,12 +31,13 @@ npm run deploy
 ## ✨ 功能特点
 
 ### 支持协议
-- ShadowSocks
+- Shadowsocks（含旧式 URL）
 - VMess
 - VLESS
-- Hysteria2
 - Trojan
+- Hysteria2
 - TUIC
+- Anytls
 
 ### 核心功能
 - 支持导入 Base64 的 http/https 订阅链接以及多种协议的分享URL
@@ -48,8 +49,9 @@ npm run deploy
 
 ### 客户端支持
 - Sing-Box
-- Clash
-- Xray/V2Ray
+- Clash / Clash.Meta
+- Surge
+- Xray / V2Ray
 
 ### Web 界面特性
 - 用户友好的操作界面
@@ -68,29 +70,37 @@ npm run deploy
 
 ## 📝 最近更新
 
-### 2025-05-02
+### 2025-11-09
 
-- 现在如果存在相同名称的代理，会自动进行重命名([#175](https://github.com/7Sageer/sublink-worker/pull/175))
-- 修复Singbox的DNS配置([#174](https://github.com/7Sageer/sublink-worker/pull/174))
+- Parser → IR → Builder 架构上线，解析器统一产出 IR
+- 新增 Surge Builder，并为 Singbox/Clash/Xray 去除冗余 switch
+- 新文档：`docs/ARCHITECTURE.md`、`docs/MAINTENANCE.md`，记录扩展流程
 
-## 🔧 项目结构
+## 🔧 项目结构（Parser → IR → Builder）
 
 ```
-.
-├── index.js                 # 主要的服务器逻辑，处理请求路由
-├── BaseConfigBuilder.js     # 构建基础配置
-├── SingboxConfigBuilder.js  # 构建 Sing-Box 配置
-├── ClashConfigBuilder.js    # 构建 Clash 配置
-├── ProxyParsers.js         # 解析各种代理协议的 URL
-├── utils.js                # 提供各种实用函数
-├── htmlBuilder.js          # 生成 Web 界面
-├── style.js               # 生成 Web 界面的 CSS
-├── config.js              # 保存配置信息
-└── docs/
-    ├── APIDoc.md         # API 文档
-    ├── UpdateLogs.md      # 更新日志
-    ├── FAQ.md             # 常见问题解答
-    └── BaseConfig.md      # 基础配置功能介绍
+src/
+├── index.js                 # Worker 入口
+├── handlers.js              # 路由处理
+├── parsers/                 # 各协议解析器（输出 IR）
+│   └── index.js             # parser chain
+├── ir/
+│   ├── factory.js           # createVmessNode / ...
+│   └── maps/                # mapIRToClash/Singbox/Surge/Xray
+├── BaseConfigBuilder.js     # 统一解析/去重流程
+├── SingboxConfigBuilder.js  # Sing-Box Builder
+├── ClashConfigBuilder.js    # Clash Builder
+├── SurgeConfigBuilder.js    # Surge Builder
+├── XrayConfigBuilder.js     # Xray Builder
+└── utils.js / htmlBuilder.js / style.js ...
+
+docs/
+├── APIDoc.md                # API 文档
+├── ARCHITECTURE.md          # 架构概览
+├── MAINTENANCE.md           # 扩展/维护指南
+├── BaseConfig.md            # 自定义基础配置说明
+├── UpdateLogs.md            # 更新日志
+└── FAQ.md
 ```
 
 ## 🤝 贡献
