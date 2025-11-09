@@ -1,8 +1,10 @@
-import { ProxyParser, convertYamlProxyToObject } from './ProxyParsers.js';
+import { parse as parseProxyLink } from './parsers/index.js';
 import { DeepCopy, tryDecodeSubscriptionLines, decodeBase64, parseCountryFromNodeName } from './utils.js';
 import yaml from 'js-yaml';
 import { t, setLanguage } from './i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from './config.js';
+
+import { convertYamlProxyToObject } from './parsers/yamlHelper.js';
 
 export class BaseConfigBuilder {
     constructor(inputString, baseConfig, lang, userAgent, groupByCountry = false) {
@@ -27,98 +29,57 @@ export class BaseConfigBuilder {
         const input = this.inputString || '';
         const parsedItems = [];
 
-        // Quick heuristic: if looks like plain YAML text (and not URLs), try YAML first without decoding
-        const looksLikeYaml = /\bproxies\s*:/i.test(input) && /\btype\s*:/i.test(input);
-        if (looksLikeYaml) {
-            try {
-                const obj = yaml.load(input.trim());
-                if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
-                    const overrides = DeepCopy(obj);
-                    delete overrides.proxies;
-                    if (Object.keys(overrides).length > 0) {
-                        this.applyConfigOverrides(overrides);
-                    }
-                    for (const p of obj.proxies) {
-                        const proxy = convertYamlProxyToObject(p);
-                        if (proxy) parsedItems.push(proxy);
-                    }
-                    if (parsedItems.length > 0) return parsedItems;
+        // Try parsing as a whole YAML config first
+        try {
+            const yamlContent = input.trim().startsWith('proxies:') ? input : decodeBase64(input);
+            const obj = yaml.load(yamlContent);
+            if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
+                const overrides = DeepCopy(obj);
+                delete overrides.proxies;
+                if (Object.keys(overrides).length > 0) {
+                    this.applyConfigOverrides(overrides);
                 }
-            } catch (e) {
-                console.warn('YAML parse failed in builder (heuristic path):', e?.message || e);
+                for (const p of obj.proxies) {
+                    const proxy = convertYamlProxyToObject(p);
+                    if (proxy) parsedItems.push(proxy);
+                }
+                if (parsedItems.length > 0) return parsedItems;
             }
+        } catch (e) {
+            // Not a valid YAML, proceed to line-by-line parsing
         }
 
-        // If not clear YAML, only try whole-document decode if input looks base64-like
-        const isBase64Like = /^[A-Za-z0-9+/=\r\n]+$/.test(input) && input.replace(/[\r\n]/g, '').length % 4 === 0;
-        if (!looksLikeYaml && isBase64Like) {
-            try {
-                const sanitized = input.replace(/\s+/g, '');
-                const decodedWhole = decodeBase64(sanitized);
-                if (typeof decodedWhole === 'string') {
-                    const maybeYaml = decodedWhole.trim();
+        // Line-by-line processing for subscription links
+        const lines = input.split('\n').filter(line => line.trim() !== '');
+        for (const line of lines) {
+            let decodedLines = tryDecodeSubscriptionLines(line);
+            if (!Array.isArray(decodedLines)) {
+                decodedLines = [decodedLines];
+            }
+
+            for (const decodedLine of decodedLines) {
+                if (decodedLine.startsWith('http')) { // It's a subscription link
                     try {
-                        const obj = yaml.load(maybeYaml);
-                        if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
-                            const overrides = DeepCopy(obj);
-                            delete overrides.proxies;
-                            if (Object.keys(overrides).length > 0) {
-                                this.applyConfigOverrides(overrides);
-                            }
-                            for (const p of obj.proxies) {
-                                const proxy = convertYamlProxyToObject(p);
-                                if (proxy) parsedItems.push(proxy);
-                            }
-                            if (parsedItems.length > 0) return parsedItems;
+                        const response = await fetch(decodedLine, { headers: { 'User-Agent': this.userAgent } });
+                        const text = await response.text();
+                        let subLines = tryDecodeSubscriptionLines(text);
+                        if (!Array.isArray(subLines)) subLines = [subLines];
+                        
+                        for (const subLine of subLines) {
+                            const parsed = await parseProxyLink(subLine, this.userAgent);
+                            if (parsed) parsedItems.push(parsed);
                         }
                     } catch (e) {
-                        // not YAML; fall through
+                        console.warn(`Failed to fetch subscription: ${decodedLine}`, e);
                     }
-                }
-            } catch (_) {}
-        }
-
-        // Otherwise, line-by-line processing (URLs, subscription content, remote lists, etc.)
-        const urls = input.split('\n').filter(url => url.trim() !== '');
-        for (const url of urls) {
-            let processedUrls = tryDecodeSubscriptionLines(url);
-            if (!Array.isArray(processedUrls)) {
-                processedUrls = [processedUrls];
-            }
-
-            for (const processedUrl of processedUrls) {
-                const result = await ProxyParser.parse(processedUrl, this.userAgent);
-                if (result && typeof result === 'object' && result.type === 'yamlConfig') {
-                    if (result.config) {
-                        this.applyConfigOverrides(result.config);
-                    }
-                    if (Array.isArray(result.proxies)) {
-                        result.proxies.forEach(proxy => {
-                            if (proxy && typeof proxy === 'object' && proxy.tag) {
-                                parsedItems.push(proxy);
-                            }
-                        });
-                    }
-                    continue;
-                }
-                if (Array.isArray(result)) {
-                    for (const item of result) {
-                        if (item && typeof item === 'object' && item.tag) {
-                            parsedItems.push(item);
-                        } else if (typeof item === 'string') {
-                            const subResult = await ProxyParser.parse(item, this.userAgent);
-                            if (subResult) {
-                                parsedItems.push(subResult);
-                            }
-                        }
-                    }
-                } else if (result) {
-                    parsedItems.push(result);
+                } else { // It's a direct proxy link
+                    const parsed = await parseProxyLink(decodedLine, this.userAgent);
+                    if (parsed) parsedItems.push(parsed);
                 }
             }
         }
 
-        return parsedItems;
+        return parsedItems.flat().filter(Boolean);
     }
 
     applyConfigOverrides(overrides) {

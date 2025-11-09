@@ -1,4 +1,5 @@
-import { parseUrlParams, parseServerInfo, createTlsConfig, parseMaybeNumber, parseArray, parseBool } from '../utils.js';
+import { parseUrlParams, parseServerInfo, createTlsConfig } from './url.js';
+import { parseMaybeNumber, parseArray, parseBool } from '../utils.js';
 
 export class Hysteria2Parser {
   canParse(url) {

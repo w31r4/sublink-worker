@@ -1,7 +1,3 @@
-import { parseServerInfo, parseUrlParams, createTlsConfig, createTransportConfig, decodeBase64, base64ToBinary, DeepCopy } from './utils.js';
-import { parse as parseWithNewParser } from './parsers/index.js';
-
-// Shared: convert a Clash YAML proxy entry to internal proxy object
 export function convertYamlProxyToObject(p) {
   if (!p || typeof p !== 'object' || !p.type) return null;
   const type = String(p.type).toLowerCase();
@@ -263,12 +259,3 @@ export function convertYamlProxyToObject(p) {
       return null;
   }
 }
-
-
-export class ProxyParser {
-  static async parse(url, userAgent) {
-    return await parseWithNewParser(url, userAgent);
-  }
-}
-
-    

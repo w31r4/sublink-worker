@@ -1,4 +1,5 @@
-import { parseUrlParams, parseServerInfo, parseArray, parseBool } from '../utils.js';
+import { parseUrlParams, parseServerInfo } from './url.js';
+import { parseArray, parseBool } from '../utils.js';
 
 export class TuicParser {
   canParse(url) {

@@ -1,4 +1,5 @@
-import { base64ToBinary } from '../utils.js';
+import { decodeBase64 } from '../utils.js';
+import { parseUrlParams, parseServerInfo } from './url.js';
 
 export class ShadowsocksParser {
   canParse(url) {
@@ -7,66 +8,42 @@ export class ShadowsocksParser {
 
   parse(url) {
     try {
-      let parts = url.replace('ss://', '').split('#');
-      let mainPart = parts[0];
-      let tag = parts[1];
-      if (tag && tag.includes('%')) {
-        tag = decodeURIComponent(tag);
+      const { addressPart, name: tag } = parseUrlParams(url);
+
+      // Modern format: ss://<base64-encoded-method-password>@<server>:<port>
+      if (addressPart.includes('@')) {
+        const [userInfo, serverInfo] = addressPart.split('@');
+        const decodedUserInfo = decodeBase64(decodeURIComponent(userInfo));
+        const [method, ...passwordParts] = decodedUserInfo.split(':');
+        const password = passwordParts.join(':');
+        const { host, port } = parseServerInfo(serverInfo);
+        return this.createConfig(tag, host, port, method, password);
       }
+      
+      // Legacy format: ss://<base64-encoded-full-info>
+      const decodedLegacy = decodeBase64(addressPart);
+      const [methodAndPass, serverInfo] = decodedLegacy.split('@');
+      const [method, ...passwordParts] = methodAndPass.split(':');
+      const password = passwordParts.join(':');
+      const { host, port } = parseServerInfo(serverInfo);
+      return this.createConfig(tag, host, port, method, password);
 
-      // Try new format first
-      try {
-        let [base64, serverPart] = mainPart.split('@');
-        // If no @ symbol found, try legacy format
-        if (!serverPart) {
-          // Decode the entire mainPart for legacy format
-          let decodedLegacy = base64ToBinary(mainPart);
-          // Legacy format: method:password@server:port
-          let [methodAndPass, serverInfo] = decodedLegacy.split('@');
-          let [method, password] = methodAndPass.split(':');
-          let [server, server_port] = this.parseServer(serverInfo);
-          
-          return this.createConfig(tag, server, server_port, method, password);
-        }
-
-        // Continue with new format parsing
-        let decodedParts = base64ToBinary(decodeURIComponent(base64)).split(':');
-        let method = decodedParts[0];
-        let password = decodedParts.slice(1).join(':');
-        let [server, server_port] = this.parseServer(serverPart);
-
-        return this.createConfig(tag, server, server_port, method, password);
-      } catch (e) {
-        console.error('Failed to parse shadowsocks URL:', e);
-        return null;
-      }
     } catch (e) {
       console.error('Failed to parse shadowsocks URL:', e);
       return null;
     }
   }
 
-  // Helper method to parse server info
-  parseServer(serverPart) {
-    // Match IPv6 address
-    let match = serverPart.match(/\[([^\]]+)\]:(\d+)/);
-    if (match) {
-      return [match[1], match[2]];
-    }
-    return serverPart.split(':');
-  }
-
-  // Helper method to create config object
   createConfig(tag, server, server_port, method, password) {
     return {
-      "tag": tag || "Shadowsocks",
-      "type": 'shadowsocks',
-      "server": server,
-      "server_port": parseInt(server_port),
-      "method": method,
-      "password": password,
-      "network": 'tcp',
-      "tcp_fast_open": false
+      tag: tag || "Shadowsocks",
+      type: 'shadowsocks',
+      server: server,
+      server_port: parseInt(server_port),
+      method: method,
+      password: password,
+      network: 'tcp',
+      tcp_fast_open: false,
     };
   }
 }

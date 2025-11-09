@@ -1,4 +1,5 @@
-import { parseUrlParams, parseServerInfo, parseBool, parseMaybeNumber, parseArray } from '../utils.js';
+import { parseUrlParams, parseServerInfo } from './url.js';
+import { parseBool, parseMaybeNumber, parseArray } from '../utils.js';
 
 export class AnytlsParser {
   canParse(url) {

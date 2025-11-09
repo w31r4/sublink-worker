@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 import { decodeBase64, DeepCopy } from '../utils.js';
-import { convertYamlProxyToObject } from '../ProxyParsers.js';
+import { convertYamlProxyToObject } from './yamlHelper.js';
 
 export class HttpParser {
   canParse(url) {

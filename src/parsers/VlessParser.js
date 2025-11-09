@@ -1,4 +1,5 @@
-import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig, parseArray } from '../utils.js';
+import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from './url.js';
+import { parseArray } from '../utils.js';
 
 export class VlessParser {
   canParse(url) {

@@ -1,4 +1,4 @@
-import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from '../utils.js';
+import { parseUrlParams, parseServerInfo, createTlsConfig, createTransportConfig } from './url.js';
 
 export class TrojanParser {
   canParse(url) {
