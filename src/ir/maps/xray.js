@@ -58,13 +58,17 @@ function buildStreamSettings(ir, original) {
       stream.realitySettings = {
         serverName: tls.sni,
         publicKey: tls.reality.publicKey || tls.reality.public_key,
-        shortId: tls.reality.shortId || tls.reality.short_id
+        shortId: tls.reality.shortId || tls.reality.short_id,
+        ...(tls.utls?.fingerprint ? { fingerprint: tls.utls.fingerprint } : {})
       };
     } else {
       stream.security = 'tls';
-      stream.tlsSettings = { serverName: tls.sni, allowInsecure: !!original?.tls?.insecure };
+      stream.tlsSettings = {
+        serverName: tls.sni,
+        allowInsecure: !!original?.tls?.insecure,
+        ...(Array.isArray(tls.alpn) ? { alpn: tls.alpn } : {})
+      };
     }
   }
   return stream;
 }
-
