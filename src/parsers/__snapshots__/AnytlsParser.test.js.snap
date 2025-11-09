@@ -1,0 +1,119 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AnytlsParser > should parse a typical anytls URL 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "anytls",
+  "port": 443,
+  "proto": {
+    "anytls": {
+      "idle_session_check_interval": undefined,
+      "idle_session_timeout": undefined,
+      "min_idle_session": undefined,
+    },
+  },
+  "tags": [
+    "MyAnytlsNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "udp": true,
+  "version": "1.0.0",
+}
+`;
+
+exports[`AnytlsParser > should parse an anytls URL with alpn 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "anytls",
+  "port": 443,
+  "proto": {
+    "anytls": {
+      "idle_session_check_interval": undefined,
+      "idle_session_timeout": undefined,
+      "min_idle_session": undefined,
+    },
+  },
+  "tags": [
+    "MyAnytlsNodeWithAlpn",
+  ],
+  "tls": {
+    "alpn": [
+      "h2",
+      "http/1.1",
+    ],
+    "enabled": true,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`AnytlsParser > should parse an anytls URL with insecure tls 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "anytls",
+  "port": 443,
+  "proto": {
+    "anytls": {
+      "idle_session_check_interval": undefined,
+      "idle_session_timeout": undefined,
+      "min_idle_session": undefined,
+    },
+  },
+  "tags": [
+    "MyAnytlsNodeInsecure",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": true,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`AnytlsParser > should parse an anytls URL with utls enabled 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "anytls",
+  "port": 443,
+  "proto": {
+    "anytls": {
+      "idle_session_check_interval": undefined,
+      "idle_session_timeout": undefined,
+      "min_idle_session": undefined,
+    },
+  },
+  "tags": [
+    "MyAnytlsNodeWithUtls",
+  ],
+  "tls": {
+    "enabled": true,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+    "utls": {
+      "enabled": true,
+      "fingerprint": "chrome",
+    },
+  },
+  "version": "1.0.0",
+}
+`;

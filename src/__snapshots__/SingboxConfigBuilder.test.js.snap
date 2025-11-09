@@ -1,0 +1,432 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SingboxConfigBuilder > should group proxies by country when groupByCountry is true 1`] = `
+{
+  "dns": {
+    "final": "dns_direct",
+    "independent_cache": true,
+    "rules": [
+      {
+        "query_type": [
+          "A",
+          "AAAA",
+        ],
+        "rule_set": "geolocation-!cn",
+        "server": "dns_fakeip",
+      },
+      {
+        "query_type": "CNAME",
+        "rule_set": "geolocation-!cn",
+        "server": "dns_proxy",
+      },
+      {
+        "action": "predefined",
+        "invert": true,
+        "query_type": [
+          "A",
+          "AAAA",
+          "CNAME",
+        ],
+        "rcode": "REFUSED",
+      },
+    ],
+    "servers": [
+      {
+        "detour": "🚀 Node Select",
+        "domain_resolver": "dns_resolver",
+        "server": "1.1.1.1",
+        "tag": "dns_proxy",
+        "type": "tcp",
+      },
+      {
+        "domain_resolver": "dns_resolver",
+        "server": "dns.alidns.com",
+        "tag": "dns_direct",
+        "type": "https",
+      },
+      {
+        "server": "223.5.5.5",
+        "tag": "dns_resolver",
+        "type": "udp",
+      },
+      {
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18",
+        "tag": "dns_fakeip",
+        "type": "fakeip",
+      },
+    ],
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": true,
+    },
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "tag": "mixed-in",
+      "type": "mixed",
+    },
+    {
+      "address": "172.19.0.1/30",
+      "auto_route": true,
+      "sniff": true,
+      "stack": "mixed",
+      "strict_route": true,
+      "tag": "tun-in",
+      "type": "tun",
+    },
+  ],
+  "ntp": {
+    "enabled": true,
+    "interval": "30m",
+    "server": "time.apple.com",
+    "server_port": 123,
+  },
+  "outbounds": [
+    {
+      "outbounds": [
+        "DIRECT",
+        "REJECT",
+        "⚡ Auto Select",
+        "🖐️ Manual Switch",
+        "🇬🇧 United Kingdom",
+        "🇺🇸 United States",
+      ],
+      "tag": "🚀 Node Select",
+      "type": "selector",
+    },
+    {
+      "outbounds": [
+        "🇺🇸 US Node",
+        "🇬🇧 UK Node",
+      ],
+      "tag": "⚡ Auto Select",
+      "type": "urltest",
+    },
+    {
+      "tag": "REJECT",
+      "type": "block",
+    },
+    {
+      "tag": "DIRECT",
+      "type": "direct",
+    },
+    {
+      "method": "aes-256-gcm",
+      "password": "password",
+      "server": "1.1.1.1",
+      "server_port": 8888,
+      "tag": "🇺🇸 US Node",
+      "type": "shadowsocks",
+    },
+    {
+      "method": "aes-256-gcm",
+      "password": "password",
+      "server": "8.8.8.8",
+      "server_port": 8888,
+      "tag": "🇬🇧 UK Node",
+      "type": "shadowsocks",
+    },
+    {
+      "outbounds": [
+        "🇺🇸 US Node",
+        "🇬🇧 UK Node",
+      ],
+      "tag": "🖐️ Manual Switch",
+      "type": "selector",
+    },
+    {
+      "outbounds": [
+        "🇬🇧 UK Node",
+      ],
+      "tag": "🇬🇧 United Kingdom",
+      "type": "urltest",
+    },
+    {
+      "outbounds": [
+        "🇺🇸 US Node",
+      ],
+      "tag": "🇺🇸 United States",
+      "type": "urltest",
+    },
+    {
+      "outbounds": [
+        "DIRECT",
+        "REJECT",
+        "🚀 Node Select",
+        "⚡ Auto Select",
+        "🖐️ Manual Switch",
+        "🇬🇧 United Kingdom",
+        "🇺🇸 United States",
+      ],
+      "tag": "🐟 Fall Back",
+      "type": "selector",
+    },
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_domain_resolver": "dns_resolver",
+    "final": "🐟 Fall Back",
+    "rule_set": [
+      {
+        "format": "binary",
+        "tag": "geolocation-!cn",
+        "type": "remote",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/lyc8503/sing-box-rules/refs/heads/rule-set-geosite/geosite-geolocation-!cn.srs",
+      },
+    ],
+    "rules": [
+      {
+        "clash_mode": "direct",
+        "outbound": "DIRECT",
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "🚀 Node Select",
+      },
+      {
+        "action": "sniff",
+      },
+      {
+        "action": "hijack-dns",
+        "protocol": "dns",
+      },
+      {
+        "clash_mode": "direct",
+        "outbound": "DIRECT",
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "🚀 Node Select",
+      },
+      {
+        "action": "sniff",
+      },
+      {
+        "action": "hijack-dns",
+        "protocol": "dns",
+      },
+    ],
+  },
+}
+`;
+
+exports[`SingboxConfigBuilder > should perform an end-to-end conversion of mixed proxies 1`] = `
+{
+  "dns": {
+    "final": "dns_direct",
+    "independent_cache": true,
+    "rules": [
+      {
+        "query_type": [
+          "A",
+          "AAAA",
+        ],
+        "rule_set": "geolocation-!cn",
+        "server": "dns_fakeip",
+      },
+      {
+        "query_type": "CNAME",
+        "rule_set": "geolocation-!cn",
+        "server": "dns_proxy",
+      },
+      {
+        "action": "predefined",
+        "invert": true,
+        "query_type": [
+          "A",
+          "AAAA",
+          "CNAME",
+        ],
+        "rcode": "REFUSED",
+      },
+    ],
+    "servers": [
+      {
+        "detour": "🚀 节点选择",
+        "domain_resolver": "dns_resolver",
+        "server": "1.1.1.1",
+        "tag": "dns_proxy",
+        "type": "tcp",
+      },
+      {
+        "domain_resolver": "dns_resolver",
+        "server": "dns.alidns.com",
+        "tag": "dns_direct",
+        "type": "https",
+      },
+      {
+        "server": "223.5.5.5",
+        "tag": "dns_resolver",
+        "type": "udp",
+      },
+      {
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18",
+        "tag": "dns_fakeip",
+        "type": "fakeip",
+      },
+    ],
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": true,
+    },
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "tag": "mixed-in",
+      "type": "mixed",
+    },
+    {
+      "address": "172.19.0.1/30",
+      "auto_route": true,
+      "sniff": true,
+      "stack": "mixed",
+      "strict_route": true,
+      "tag": "tun-in",
+      "type": "tun",
+    },
+  ],
+  "ntp": {
+    "enabled": true,
+    "interval": "30m",
+    "server": "time.apple.com",
+    "server_port": 123,
+  },
+  "outbounds": [
+    {
+      "outbounds": [
+        "DIRECT",
+        "REJECT",
+        "⚡ Auto Select",
+        "vmess-ws-tls",
+        "trojan-node",
+      ],
+      "tag": "🚀 Node Select",
+      "type": "selector",
+    },
+    {
+      "outbounds": [
+        "vmess-ws-tls",
+        "trojan-node",
+      ],
+      "tag": "⚡ Auto Select",
+      "type": "urltest",
+    },
+    {
+      "tag": "REJECT",
+      "type": "block",
+    },
+    {
+      "tag": "DIRECT",
+      "type": "direct",
+    },
+    {
+      "network": "ws",
+      "security": "auto",
+      "server": "cloudflare.com",
+      "server_port": 443,
+      "tag": "vmess-ws-tls",
+      "tls": {
+        "enabled": true,
+        "insecure": false,
+        "server_name": undefined,
+        "sni": undefined,
+      },
+      "transport": {
+        "headers": {
+          "Host": "server.com",
+        },
+        "path": "/path",
+        "type": "ws",
+      },
+      "type": "vmess",
+      "uuid": "your-uuid",
+    },
+    {
+      "flow": undefined,
+      "network": "tcp",
+      "password": "password",
+      "server": "example.com",
+      "server_port": 443,
+      "tag": "trojan-node",
+      "tls": {
+        "enabled": true,
+        "insecure": false,
+        "server_name": undefined,
+        "sni": undefined,
+      },
+      "transport": {
+        "path": undefined,
+        "type": undefined,
+      },
+      "type": "trojan",
+    },
+    {
+      "outbounds": [
+        "DIRECT",
+        "REJECT",
+        "🚀 Node Select",
+        "⚡ Auto Select",
+        "vmess-ws-tls",
+        "trojan-node",
+      ],
+      "tag": "🐟 Fall Back",
+      "type": "selector",
+    },
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_domain_resolver": "dns_resolver",
+    "final": "🐟 Fall Back",
+    "rule_set": [
+      {
+        "format": "binary",
+        "tag": "geolocation-!cn",
+        "type": "remote",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/lyc8503/sing-box-rules/refs/heads/rule-set-geosite/geosite-geolocation-!cn.srs",
+      },
+    ],
+    "rules": [
+      {
+        "clash_mode": "direct",
+        "outbound": "DIRECT",
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "🚀 Node Select",
+      },
+      {
+        "action": "sniff",
+      },
+      {
+        "action": "hijack-dns",
+        "protocol": "dns",
+      },
+      {
+        "clash_mode": "direct",
+        "outbound": "DIRECT",
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "🚀 Node Select",
+      },
+      {
+        "action": "sniff",
+      },
+      {
+        "action": "hijack-dns",
+        "protocol": "dns",
+      },
+    ],
+  },
+}
+`;

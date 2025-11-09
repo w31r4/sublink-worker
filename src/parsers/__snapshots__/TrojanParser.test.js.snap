@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TrojanParser > should parse a trojan URL with params 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "trojan",
+  "network": "ws",
+  "port": 443,
+  "tags": [
+    "MyTrojanWsNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "transport": {
+    "path": "/ws-path",
+    "type": "ws",
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`TrojanParser > should parse a typical trojan URL 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "trojan",
+  "network": "tcp",
+  "port": 443,
+  "tags": [
+    "MyTrojanNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "transport": {
+    "path": undefined,
+    "type": undefined,
+  },
+  "version": "1.0.0",
+}
+`;

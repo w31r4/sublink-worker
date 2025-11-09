@@ -1,0 +1,70 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Hysteria2Parser > should parse a hysteria2 URL with params 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "hysteria2",
+  "port": 443,
+  "proto": {
+    "hy2": {
+      "auth": undefined,
+      "down": undefined,
+      "fast_open": undefined,
+      "hop_interval": undefined,
+      "obfs": {
+        "password": "obfspwd",
+        "type": "salamander",
+      },
+      "ports": undefined,
+      "recv_window_conn": undefined,
+      "up": undefined,
+    },
+  },
+  "tags": [
+    "MyHysteria2ObfsNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`Hysteria2Parser > should parse a typical hysteria2 URL 1`] = `
+{
+  "auth": {
+    "password": "password",
+  },
+  "host": "example.com",
+  "kind": "hysteria2",
+  "port": 443,
+  "proto": {
+    "hy2": {
+      "auth": undefined,
+      "down": undefined,
+      "fast_open": undefined,
+      "hop_interval": undefined,
+      "obfs": undefined,
+      "ports": undefined,
+      "recv_window_conn": undefined,
+      "up": undefined,
+    },
+  },
+  "tags": [
+    "MyHysteria2Node",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "version": "1.0.0",
+}
+`;

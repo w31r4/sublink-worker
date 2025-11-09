@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TuicParser > should parse a tuic URL with params 1`] = `
+{
+  "auth": {
+    "password": "password",
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "host": "example.com",
+  "kind": "tuic",
+  "port": 443,
+  "proto": {
+    "tuic": {
+      "congestion_control": "bbr",
+      "disable_sni": undefined,
+      "fast_open": undefined,
+      "reduce_rtt": undefined,
+      "udp_relay_mode": "native",
+      "zero_rtt": undefined,
+    },
+  },
+  "tags": [
+    "MyTuicBbrNode",
+  ],
+  "tls": {
+    "alpn": undefined,
+    "enabled": true,
+    "insecure": true,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`TuicParser > should parse a typical tuic URL 1`] = `
+{
+  "auth": {
+    "password": "password",
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "host": "example.com",
+  "kind": "tuic",
+  "port": 443,
+  "proto": {
+    "tuic": {
+      "congestion_control": "bbr",
+      "disable_sni": undefined,
+      "fast_open": undefined,
+      "reduce_rtt": undefined,
+      "udp_relay_mode": "native",
+      "zero_rtt": undefined,
+    },
+  },
+  "tags": [
+    "MyTuicNode",
+  ],
+  "tls": {
+    "alpn": undefined,
+    "enabled": true,
+    "insecure": true,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "version": "1.0.0",
+}
+`;

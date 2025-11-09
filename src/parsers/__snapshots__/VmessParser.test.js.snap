@@ -1,0 +1,95 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VmessParser > should handle http transport type 1`] = `
+{
+  "alterId": 0,
+  "auth": {
+    "method": "auto",
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "ext": {
+    "clash": {
+      "alterId": 0,
+    },
+  },
+  "host": "example.com",
+  "kind": "vmess",
+  "network": "http",
+  "port": 8080,
+  "tags": [
+    "http-node",
+  ],
+  "transport": {
+    "headers": {
+      "Host": [
+        "example.com",
+      ],
+    },
+    "method": "GET",
+    "path": [
+      "/",
+    ],
+    "type": "http",
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`VmessParser > should parse a typical vmess URL 1`] = `
+{
+  "alterId": 64,
+  "auth": {
+    "method": "auto",
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "ext": {
+    "clash": {
+      "alterId": 64,
+    },
+  },
+  "host": "example.com",
+  "kind": "vmess",
+  "network": "ws",
+  "port": 443,
+  "tags": [
+    "MyVmessNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "transport": {
+    "headers": {
+      "Host": "sub.example.com",
+    },
+    "path": "/ws-path",
+    "type": "ws",
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`VmessParser > should parse a vmess URL with a tag override 1`] = `
+{
+  "alterId": 0,
+  "auth": {
+    "method": "auto",
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "ext": {
+    "clash": {
+      "alterId": 0,
+    },
+  },
+  "host": "1.2.3.4",
+  "kind": "vmess",
+  "network": "tcp",
+  "port": 80,
+  "tags": [
+    "NewName",
+  ],
+  "version": "1.0.0",
+}
+`;

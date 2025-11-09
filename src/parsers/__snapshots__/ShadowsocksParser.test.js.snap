@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ShadowsocksParser > should parse a legacy shadowsocks URL 1`] = `
+{
+  "auth": {
+    "method": "aes-256-gcm",
+    "password": "testpassword",
+  },
+  "host": "example.com",
+  "kind": "shadowsocks",
+  "port": 8080,
+  "tags": [
+    "MyLegacyNode",
+  ],
+  "version": "1.0.0",
+}
+`;
+
+exports[`ShadowsocksParser > should parse a modern shadowsocks URL 1`] = `
+{
+  "auth": {
+    "method": "aes-256-gcm",
+    "password": "testpassword",
+  },
+  "host": "example.com",
+  "kind": "shadowsocks",
+  "port": 8080,
+  "tags": [
+    "MyShadowsocksNode",
+  ],
+  "version": "1.0.0",
+}
+`;

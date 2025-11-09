@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VlessParser > should parse a typical vless URL 1`] = `
+{
+  "auth": {
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "host": "example.com",
+  "kind": "vless",
+  "network": "tcp",
+  "port": 443,
+  "tags": [
+    "MyVlessNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": undefined,
+    "sni": undefined,
+  },
+  "transport": {
+    "path": undefined,
+    "type": undefined,
+  },
+  "version": "1.0.0",
+}
+`;
+
+exports[`VlessParser > should parse a vless URL with params 1`] = `
+{
+  "auth": {
+    "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+  },
+  "host": "example.com",
+  "kind": "vless",
+  "network": "ws",
+  "port": 443,
+  "tags": [
+    "MyVlessWsNode",
+  ],
+  "tls": {
+    "enabled": true,
+    "insecure": false,
+    "server_name": "sub.example.com",
+    "sni": "sub.example.com",
+  },
+  "transport": {
+    "path": "/ws-path",
+    "type": "ws",
+  },
+  "version": "1.0.0",
+}
+`;
