@@ -105,7 +105,7 @@ const translations = {
       'GLOBAL': 'GLOBAL'
     },
     groupByCountry: '按国家分组',
-    groupByCountryTip: '仅 Clash/Surge/SingBox 生效',
+    groupByCountryTip: '根据节点名称自动识别国家并创建分组（适用于所有客户端）',
     UASettings: '自定义UserAgent',
     UAtip: '默认值curl/7.74.0'
   },
@@ -212,7 +212,7 @@ const translations = {
       'GLOBAL': 'GLOBAL'
     },
     groupByCountry: 'Group by Country',
-    groupByCountryTip: 'Clash/Surge/SingBox only',
+    groupByCountryTip: 'Automatically group nodes by detected country (works for all clients)',
     UASettings: 'Custom UserAgent',
     UAtip: 'By default it will use curl/7.74.0'
   },
@@ -319,7 +319,7 @@ const translations = {
       'GLOBAL': 'GLOBAL'
     },
     groupByCountry: 'گروه‌بندی بر اساس کشور',
-    groupByCountryTip: 'فقط Clash/Surge/SingBox',
+    groupByCountryTip: 'براساس نام گره، کشور را تشخیص داده و برای تمام کلاینت‌ها گروه می‌کند',
     UASettings: 'UserAgent سفارشی',
     UAtip: 'به طور پیش‌فرض از curl/7.74.0 استفاده می‌کند'
   },
@@ -426,7 +426,7 @@ const translations = {
       'GLOBAL': 'GLOBAL'
     },
     groupByCountry: 'Группировать по странам',
-    groupByCountryTip: 'Только для Clash/Surge/SingBox',
+    groupByCountryTip: 'Автоматически группирует по стране (доступно для всех клиентов)',
     UASettings: 'Пользовательский UserAgent',
     UAtip: 'По умолчанию используется curl/7.74.0'
   }

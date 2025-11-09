@@ -8,10 +8,16 @@ exports[`ShadowsocksParser > should parse a legacy shadowsocks URL 1`] = `
   },
   "host": "example.com",
   "kind": "shadowsocks",
+  "method": "aes-256-gcm",
+  "password": "testpassword",
   "port": 8080,
+  "server": "example.com",
+  "server_port": 8080,
+  "tag": "MyLegacyNode",
   "tags": [
     "MyLegacyNode",
   ],
+  "type": "shadowsocks",
   "version": "1.0.0",
 }
 `;
@@ -24,10 +30,16 @@ exports[`ShadowsocksParser > should parse a modern shadowsocks URL 1`] = `
   },
   "host": "example.com",
   "kind": "shadowsocks",
+  "method": "aes-256-gcm",
+  "password": "testpassword",
   "port": 8080,
+  "server": "example.com",
+  "server_port": 8080,
+  "tag": "MyShadowsocksNode",
   "tags": [
     "MyShadowsocksNode",
   ],
+  "type": "shadowsocks",
   "version": "1.0.0",
 }
 `;

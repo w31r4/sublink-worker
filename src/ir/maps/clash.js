@@ -1,12 +1,12 @@
 // Map Core IR to Clash proxy object (scaffold)
 export function mapIRToClash(ir, original) {
   if (!ir) return null;
-  const name = ir.tags?.[0] || 'proxy';
-  const auth = original?.auth || ir.auth || {};
-  const transport = original?.transport || ir.transport;
-  const tls = original?.tls || ir.tls;
-  const network = original?.network || ir.network;
-  const udp = typeof original?.udp !== 'undefined' ? original.udp : ir.udp;
+  const name = ir.tags?.[0] || ir.tag || 'proxy';
+  const auth = ir.auth || original?.auth || {};
+  const transport = ir.transport || original?.transport;
+  const tls = ir.tls || original?.tls;
+  const network = ir.network || original?.network;
+  const udp = typeof ir.udp !== 'undefined' ? ir.udp : original?.udp;
   const base = {
     name,
     server: ir.host,
@@ -74,7 +74,7 @@ export function mapIRToClash(ir, original) {
       'skip-cert-verify': tls?.insecure ? true : false,
       ...(typeof udp !== 'undefined' ? { udp } : {}),
       ...(Array.isArray(tls?.alpn) ? { alpn: tls.alpn } : {}),
-      ...(ir.packet_encoding ? { 'packet-encoding': ir.packet_encoding } : {}),
+      ...((ir.packetEncoding || ir.packet_encoding) ? { 'packet-encoding': ir.packetEncoding || ir.packet_encoding } : {}),
       ...(ir.flow ? { flow: ir.flow } : {}),
     };
     if (transport?.type === 'ws') {

@@ -18,7 +18,7 @@ async function handleConfig(request, builderClass, format, builderOptions = {}) 
     const url = new URL(request.url);
     const inputString = url.searchParams.get('config');
     let selectedRules = url.searchParams.get('selectedRules');
-    let customRules = url.search_params.get('customRules');
+    let customRules = url.searchParams.get('customRules');
     const groupByCountry = url.searchParams.get('group_by_country') === 'true';
     let lang = url.searchParams.get('lang') || 'zh-CN';
     let userAgent = url.searchParams.get('ua') || 'curl/7.74.0';

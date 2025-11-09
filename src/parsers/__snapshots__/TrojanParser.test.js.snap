@@ -8,7 +8,11 @@ exports[`TrojanParser > should parse a trojan URL with params 1`] = `
   "host": "example.com",
   "kind": "trojan",
   "network": "ws",
+  "password": "password",
   "port": 443,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyTrojanWsNode",
   "tags": [
     "MyTrojanWsNode",
   ],
@@ -22,6 +26,7 @@ exports[`TrojanParser > should parse a trojan URL with params 1`] = `
     "path": "/ws-path",
     "type": "ws",
   },
+  "type": "trojan",
   "version": "1.0.0",
 }
 `;
@@ -34,7 +39,11 @@ exports[`TrojanParser > should parse a typical trojan URL 1`] = `
   "host": "example.com",
   "kind": "trojan",
   "network": "tcp",
+  "password": "password",
   "port": 443,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyTrojanNode",
   "tags": [
     "MyTrojanNode",
   ],
@@ -48,6 +57,7 @@ exports[`TrojanParser > should parse a typical trojan URL 1`] = `
     "path": undefined,
     "type": undefined,
   },
+  "type": "trojan",
   "version": "1.0.0",
 }
 `;

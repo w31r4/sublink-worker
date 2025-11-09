@@ -25,17 +25,29 @@ function createBaseNode(data) {
   if (!Number.isFinite(port)) {
     throw new Error('port must be a valid number');
   }
+  const tags = sanitizeTags(data.tags);
   const node = {
     kind: data.kind,
+    type: data.kind,
     host: data.host,
+    server: data.host,
     port,
-    tags: sanitizeTags(data.tags),
+    server_port: port,
+    tags,
     version: '1.0.0',
   };
+  if (tags.length > 0) {
+    node.tag = tags[0];
+  }
   if (typeof data.udp !== 'undefined') node.udp = data.udp;
   if (data.network) node.network = data.network;
   if (data.transport) node.transport = data.transport;
-  if (data.tls) node.tls = { ...data.tls };
+  if (data.tls) {
+    node.tls = { ...data.tls };
+    if (Array.isArray(node.tls.alpn)) {
+      node.alpn = [...node.tls.alpn];
+    }
+  }
   if (data.ext) node.ext = { ...data.ext };
   return node;
 }
@@ -64,6 +76,8 @@ export function createVmessNode(data) {
   if (typeof data.tcp_fast_open !== 'undefined') {
     base.tcp_fast_open = data.tcp_fast_open;
   }
+  base.uuid = base.auth.uuid;
+  base.security = base.auth.method;
   return base;
 }
 
@@ -83,6 +97,11 @@ export function createVlessNode(data) {
   if (data.flow) {
     base.flow = data.flow;
   }
+  if (data.packet_encoding) {
+    base.packet_encoding = data.packet_encoding;
+    base.packetEncoding = data.packet_encoding;
+  }
+  base.uuid = base.auth.uuid;
   return base;
 }
 
@@ -102,6 +121,7 @@ export function createTrojanNode(data) {
   if (data.flow) {
     base.flow = data.flow;
   }
+  base.password = data.password;
   return base;
 }
 
@@ -119,6 +139,8 @@ export function createShadowsocksNode(data) {
     password: data.password,
     method: data.method,
   };
+  base.password = data.password;
+  base.method = data.method;
   return base;
 }
 
@@ -135,6 +157,7 @@ export function createHysteria2Node(data) {
   base.auth = {
     password: data.password,
   };
+  base.password = data.password;
   
   // Hysteria2 specific fields
   base.proto = {
@@ -149,8 +172,17 @@ export function createHysteria2Node(data) {
       fast_open: data.fast_open,
     },
   };
+  base.obfs = data.obfs;
+  base.authPayload = data.auth;
+  base.up = data.up;
+  base.down = data.down;
+  base.recv_window_conn = data.recv_window_conn;
+  base.ports = data.ports;
+  base.hop_interval = data.hop_interval;
+  base.fast_open = data.fast_open;
   if (Array.isArray(data.alpn) && data.alpn.length > 0) {
     base.tls = { ...(base.tls || { enabled: true }), alpn: data.alpn };
+    base.alpn = data.alpn;
   }
 
   return base;
@@ -169,6 +201,7 @@ export function createAnytlsNode(data) {
   base.auth = {
     password: data.password,
   };
+  base.password = data.password;
 
   // Anytls specific fields
   base.proto = {
@@ -178,6 +211,21 @@ export function createAnytlsNode(data) {
       min_idle_session: data.min_idle_session,
     },
   };
+  const idleCheck = data.idle_session_check_interval ?? data['idle-session-check-interval'];
+  const idleTimeout = data.idle_session_timeout ?? data['idle-session-timeout'];
+  const minIdle = data.min_idle_session ?? data['min-idle-session'];
+  if (typeof idleCheck !== 'undefined') {
+    base.idle_session_check_interval = idleCheck;
+    base['idle-session-check-interval'] = idleCheck;
+  }
+  if (typeof idleTimeout !== 'undefined') {
+    base.idle_session_timeout = idleTimeout;
+    base['idle-session-timeout'] = idleTimeout;
+  }
+  if (typeof minIdle !== 'undefined') {
+    base.min_idle_session = minIdle;
+    base['min-idle-session'] = minIdle;
+  }
 
   return base;
 }
@@ -212,6 +260,8 @@ export function createTuicNode(data) {
     uuid: data.uuid,
     password: data.password,
   };
+  base.uuid = data.uuid;
+  base.password = data.password;
 
   // TUIC specific fields
   base.proto = {
@@ -224,6 +274,12 @@ export function createTuicNode(data) {
       disable_sni: data.disable_sni,
     }
   };
+  base.congestion_control = data.congestion_control || 'bbr';
+  base.udp_relay_mode = data.udp_relay_mode || 'native';
+  if (typeof data.zero_rtt !== 'undefined') base.zero_rtt = data.zero_rtt;
+  if (typeof data.reduce_rtt !== 'undefined') base.reduce_rtt = data.reduce_rtt;
+  if (typeof data.fast_open !== 'undefined') base.fast_open = data.fast_open;
+  if (typeof data.disable_sni !== 'undefined') base.disable_sni = data.disable_sni;
 
   return base;
 }

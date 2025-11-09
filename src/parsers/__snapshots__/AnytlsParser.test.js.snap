@@ -7,6 +7,7 @@ exports[`AnytlsParser > should parse a typical anytls URL 1`] = `
   },
   "host": "example.com",
   "kind": "anytls",
+  "password": "password",
   "port": 443,
   "proto": {
     "anytls": {
@@ -15,6 +16,9 @@ exports[`AnytlsParser > should parse a typical anytls URL 1`] = `
       "min_idle_session": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyAnytlsNode",
   "tags": [
     "MyAnytlsNode",
   ],
@@ -23,6 +27,7 @@ exports[`AnytlsParser > should parse a typical anytls URL 1`] = `
     "server_name": "sub.example.com",
     "sni": "sub.example.com",
   },
+  "type": "anytls",
   "udp": true,
   "version": "1.0.0",
 }
@@ -30,11 +35,16 @@ exports[`AnytlsParser > should parse a typical anytls URL 1`] = `
 
 exports[`AnytlsParser > should parse an anytls URL with alpn 1`] = `
 {
+  "alpn": [
+    "h2",
+    "http/1.1",
+  ],
   "auth": {
     "password": "password",
   },
   "host": "example.com",
   "kind": "anytls",
+  "password": "password",
   "port": 443,
   "proto": {
     "anytls": {
@@ -43,6 +53,9 @@ exports[`AnytlsParser > should parse an anytls URL with alpn 1`] = `
       "min_idle_session": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyAnytlsNodeWithAlpn",
   "tags": [
     "MyAnytlsNodeWithAlpn",
   ],
@@ -55,6 +68,7 @@ exports[`AnytlsParser > should parse an anytls URL with alpn 1`] = `
     "server_name": undefined,
     "sni": undefined,
   },
+  "type": "anytls",
   "version": "1.0.0",
 }
 `;
@@ -66,6 +80,7 @@ exports[`AnytlsParser > should parse an anytls URL with insecure tls 1`] = `
   },
   "host": "example.com",
   "kind": "anytls",
+  "password": "password",
   "port": 443,
   "proto": {
     "anytls": {
@@ -74,6 +89,9 @@ exports[`AnytlsParser > should parse an anytls URL with insecure tls 1`] = `
       "min_idle_session": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyAnytlsNodeInsecure",
   "tags": [
     "MyAnytlsNodeInsecure",
   ],
@@ -83,6 +101,7 @@ exports[`AnytlsParser > should parse an anytls URL with insecure tls 1`] = `
     "server_name": undefined,
     "sni": undefined,
   },
+  "type": "anytls",
   "version": "1.0.0",
 }
 `;
@@ -94,6 +113,7 @@ exports[`AnytlsParser > should parse an anytls URL with utls enabled 1`] = `
   },
   "host": "example.com",
   "kind": "anytls",
+  "password": "password",
   "port": 443,
   "proto": {
     "anytls": {
@@ -102,6 +122,9 @@ exports[`AnytlsParser > should parse an anytls URL with utls enabled 1`] = `
       "min_idle_session": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyAnytlsNodeWithUtls",
   "tags": [
     "MyAnytlsNodeWithUtls",
   ],
@@ -114,6 +137,7 @@ exports[`AnytlsParser > should parse an anytls URL with utls enabled 1`] = `
       "fingerprint": "chrome",
     },
   },
+  "type": "anytls",
   "version": "1.0.0",
 }
 `;

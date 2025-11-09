@@ -27,29 +27,59 @@ export class BaseConfigBuilder {
 
     async parseCustomItems() {
         const input = this.inputString || '';
+        const trimmedInput = input.trim();
         let parsedItems = [];
 
-        // Try parsing as a whole YAML config first
-        try {
-            const yamlContent = input.trim().startsWith('proxies:') ? input : decodeBase64(input);
-            const obj = yaml.load(yamlContent);
-            if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
-                const overrides = DeepCopy(obj);
-                delete overrides.proxies;
-                if (Object.keys(overrides).length > 0) {
-                    this.applyConfigOverrides(overrides);
+        const tryParseYamlDocument = (content) => {
+            if (!content) return null;
+            try {
+                const obj = yaml.load(content);
+                if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
+                    const overrides = DeepCopy(obj);
+                    delete overrides.proxies;
+                    if (Object.keys(overrides).length > 0) {
+                        this.applyConfigOverrides(overrides);
+                    }
+                    const proxies = obj.proxies
+                        .map(p => convertYamlProxyToObject(p))
+                        .filter(Boolean);
+                    if (proxies.length > 0) {
+                        return proxies;
+                    }
                 }
-                for (const p of obj.proxies) {
-                    const proxy = convertYamlProxyToObject(p);
-                    if (proxy) parsedItems.push(proxy);
-                }
-                if (parsedItems.length > 0) return parsedItems;
+            } catch (e) {
+                // Ignore YAML errors here and fall back to other strategies
             }
-        } catch (e) {
-            // Not a valid YAML, proceed to line-by-line parsing
+            return null;
+        };
+
+        // 1) Try parsing as-is (plain YAML, proxies block can be anywhere)
+        const directYamlItems = tryParseYamlDocument(trimmedInput);
+        if (directYamlItems) {
+            return directYamlItems;
         }
 
-        // Fallback to line-by-line parsing for proxy links or subscriptions
+        // 2) If the whole input looks like base64, decode once and try YAML again
+        const sanitized = input.replace(/\s+/g, '');
+        const maybeBase64 =
+            sanitized.length > 0 &&
+            sanitized.length % 4 === 0 &&
+            /^[A-Za-z0-9+/=]+$/.test(sanitized);
+        if (maybeBase64) {
+            try {
+                const decoded = decodeBase64(sanitized);
+                if (typeof decoded === 'string') {
+                    const decodedYamlItems = tryParseYamlDocument(decoded.trim());
+                    if (decodedYamlItems) {
+                        return decodedYamlItems;
+                    }
+                }
+            } catch (e) {
+                // Ignore decoding errors and fall back to line processing
+            }
+        }
+
+        // 3) Fallback to line-by-line parsing for proxy links or subscriptions
         const lines = input.split('\n').filter(line => line.trim() !== '');
         for (const line of lines) {
             let decodedLines = tryDecodeSubscriptionLines(line);
@@ -62,6 +92,11 @@ export class BaseConfigBuilder {
                     try {
                         const response = await fetch(decodedLine, { headers: { 'User-Agent': this.userAgent } });
                         const text = await response.text();
+                        const remoteYamlItems = tryParseYamlDocument(text?.trim());
+                        if (remoteYamlItems) {
+                            parsedItems.push(...remoteYamlItems);
+                            continue;
+                        }
                         let subLines = tryDecodeSubscriptionLines(text);
                         if (!Array.isArray(subLines)) subLines = [subLines];
                         for (const subLine of subLines) {
@@ -166,11 +201,16 @@ export class BaseConfigBuilder {
     }
 
     addCustomItems(customItems) {
-        const validItems = customItems.filter(item => item != null);
+        const validItems = (customItems || []).filter(Boolean);
         validItems.forEach(item => {
-            const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean) : [];
-            const node = tags.length > 0 ? item : { ...item, tags: [item?.tag || 'proxy'] };
-            const convertedProxy = this.convertProxy(node);
+            const tags = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
+            if (tags.length === 0 && item.tag) {
+                item.tags = [item.tag];
+            }
+            if (Array.isArray(item.tags) && item.tags.length > 0 && !item.tag) {
+                item.tag = item.tags[0];
+            }
+            const convertedProxy = this.convertProxy(item);
             if (convertedProxy) {
                 this.addProxyToConfig(convertedProxy);
             }

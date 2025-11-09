@@ -338,8 +338,6 @@ exports[`SingboxConfigBuilder > should perform an end-to-end conversion of mixed
       "tls": {
         "enabled": true,
         "insecure": false,
-        "server_name": undefined,
-        "sni": undefined,
       },
       "transport": {
         "headers": {
@@ -361,13 +359,8 @@ exports[`SingboxConfigBuilder > should perform an end-to-end conversion of mixed
       "tls": {
         "enabled": true,
         "insecure": false,
-        "server_name": undefined,
-        "sni": undefined,
       },
-      "transport": {
-        "path": undefined,
-        "type": undefined,
-      },
+      "transport": {},
       "type": "trojan",
     },
     {

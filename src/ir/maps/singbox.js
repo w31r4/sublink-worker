@@ -1,13 +1,13 @@
 // Map Core IR to sing-box outbound object (scaffold)
 export function mapIRToSingbox(ir, original) {
   if (!ir) return null;
-  const auth = original?.auth || ir.auth || {};
-  const transport = original?.transport || ir.transport;
-  const tls = original?.tls || ir.tls;
-  const network = original?.network || ir.network || 'tcp';
+  const auth = ir.auth || original?.auth || {};
+  const transport = ir.transport || original?.transport;
+  const tls = ir.tls || original?.tls;
+  const network = ir.network || original?.network || 'tcp';
   const base = {
     type: ir.kind,
-    tag: ir.tags?.[0] || 'proxy',
+    tag: ir.tags?.[0] || ir.tag || 'proxy',
     server: ir.host,
     server_port: ir.port,
   };

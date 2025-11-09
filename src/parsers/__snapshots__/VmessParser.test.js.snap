@@ -16,6 +16,10 @@ exports[`VmessParser > should handle http transport type 1`] = `
   "kind": "vmess",
   "network": "http",
   "port": 8080,
+  "security": "auto",
+  "server": "example.com",
+  "server_port": 8080,
+  "tag": "http-node",
   "tags": [
     "http-node",
   ],
@@ -31,6 +35,8 @@ exports[`VmessParser > should handle http transport type 1`] = `
     ],
     "type": "http",
   },
+  "type": "vmess",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;
@@ -51,6 +57,10 @@ exports[`VmessParser > should parse a typical vmess URL 1`] = `
   "kind": "vmess",
   "network": "ws",
   "port": 443,
+  "security": "auto",
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyVmessNode",
   "tags": [
     "MyVmessNode",
   ],
@@ -67,6 +77,8 @@ exports[`VmessParser > should parse a typical vmess URL 1`] = `
     "path": "/ws-path",
     "type": "ws",
   },
+  "type": "vmess",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;
@@ -87,9 +99,15 @@ exports[`VmessParser > should parse a vmess URL with a tag override 1`] = `
   "kind": "vmess",
   "network": "tcp",
   "port": 80,
+  "security": "auto",
+  "server": "1.2.3.4",
+  "server_port": 80,
+  "tag": "NewName",
   "tags": [
     "NewName",
   ],
+  "type": "vmess",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;

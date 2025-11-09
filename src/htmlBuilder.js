@@ -634,10 +634,15 @@ const submitFormFunction = () => `
 
     const configParam = configId ? \`&configId=\${configId}\` : '';
     const groupByCountryParam = groupByCountry ? '&group_by_country=true' : '';
-    const xrayUrl = \`\${window.location.origin}/xray?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\${configParam}\${groupByCountryParam}\`;
-    const singboxUrl = \`\${window.location.origin}/singbox?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}&selectedRules=\${encodeURIComponent(JSON.stringify(selectedRules))}&customRules=\${encodeURIComponent(JSON.stringify(customRules))}\${configParam}\${groupByCountryParam}\`;
-    const clashUrl = \`\${window.location.origin}/clash?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}&selectedRules=\${encodeURIComponent(JSON.stringify(selectedRules))}&customRules=\${encodeURIComponent(JSON.stringify(customRules))}\${configParam}\${groupByCountryParam}\`;
-    const surgeUrl = \`\${window.location.origin}/surge?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}&selectedRules=\${encodeURIComponent(JSON.stringify(selectedRules))}&customRules=\${encodeURIComponent(JSON.stringify(customRules))}\${configParam}\${groupByCountryParam}\`;
+    const selectedRulesParam = \`&selectedRules=\${encodeURIComponent(JSON.stringify(selectedRules))}\`;
+    const customRulesParam = \`&customRules=\${encodeURIComponent(JSON.stringify(customRules))}\`;
+    const builderParams = \`\${selectedRulesParam}\${customRulesParam}\${configParam}\${groupByCountryParam}\`;
+
+    const xrayUrl = \`\${window.location.origin}/sub?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\`;
+    const singboxUrl = \`\${window.location.origin}/singbox?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\${builderParams}\`;
+    const clashUrl = \`\${window.location.origin}/clash?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\${builderParams}\`;
+    const surgeUrl = \`\${window.location.origin}/surge?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\${builderParams}\`;
+
     document.getElementById('xrayLink').value = xrayUrl;
     document.getElementById('singboxLink').value = singboxUrl;
     document.getElementById('clashLink').value = clashUrl;
@@ -805,7 +810,8 @@ const submitFormFunction = () => `
         else if (currentValue.includes('/singbox?') || 
                  currentValue.includes('/clash?') || 
                  currentValue.includes('/surge?') || 
-                 currentValue.includes('/xray?')) {
+                 currentValue.includes('/xray-config?') ||
+                 currentValue.includes('/sub?')) {
           parseUrlAndFillForm(currentValue);
         }
       }
@@ -911,6 +917,7 @@ const submitFormFunction = () => `
     document.getElementById('xrayLink').value = '';
     document.getElementById('singboxLink').value = '';
     document.getElementById('clashLink').value = '';
+    document.getElementById('surgeLink').value = '';
 
     // wait to reset the container
     setTimeout(() => {

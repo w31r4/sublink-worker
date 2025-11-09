@@ -41,27 +41,38 @@ import {
      return undefined;
    };
  
-   const getTls = () => {
-     if (!p.tls) return undefined;
-     const reality = p['reality-opts'];
-     const tls = {
-       sni: p.servername || p.sni,
-       insecure: !!p['skip-cert-verify'],
-       alpn: toArray(p.alpn),
-     };
-     if (reality) {
-       tls.reality = {
-         publicKey: reality['public-key'],
-         shortId: reality['short-id'],
-       };
-     }
-     if (p['client-fingerprint']) {
-       tls.utls = {
-         fingerprint: p['client-fingerprint'],
-       };
-     }
-     return tls;
-   };
+  const getTls = () => {
+    const hasTls =
+      p.tls ||
+      p.security === 'tls' ||
+      p.security === 'reality' ||
+      p['reality-opts'] ||
+      p['client-fingerprint'];
+    if (!hasTls) return undefined;
+    const reality = p['reality-opts'];
+    const tls = {
+      enabled: true,
+      sni: p.servername || p.sni || p.server,
+      server_name: p.servername || p.sni || p.server,
+      insecure: !!p['skip-cert-verify'],
+      alpn: toArray(p.alpn),
+    };
+    if (reality) {
+      tls.reality = {
+        enabled: true,
+        publicKey: reality['public-key'],
+        public_key: reality['public-key'],
+        shortId: reality['short-id'],
+        short_id: reality['short-id'],
+      };
+    }
+    if (p['client-fingerprint']) {
+      tls.utls = {
+        fingerprint: p['client-fingerprint'],
+      };
+    }
+    return tls;
+  };
  
    const common = {
      host: p.server,
@@ -88,12 +99,13 @@ import {
          alter_id: p.alterId,
          security: p.cipher || p.security || 'auto',
        });
-     case 'vless':
-       return createVlessNode({
-         ...common,
-         uuid: p.uuid,
-         flow: p.flow,
-       });
+    case 'vless':
+      return createVlessNode({
+        ...common,
+        uuid: p.uuid,
+        flow: p.flow,
+        packet_encoding: p['packet-encoding'],
+      });
      case 'trojan':
        return createTrojanNode({
          ...common,
@@ -105,9 +117,17 @@ import {
     case 'hy2': {
       const obfs = p.obfs ? { type: p.obfs, password: p['obfs-password'] } : undefined;
       const hopInterval = typeof p['hop-interval'] !== 'undefined' ? Number(p['hop-interval']) : undefined;
+      const tls = {
+        enabled: true,
+        sni: p.sni || p.server,
+        server_name: p.sni || p.server,
+        insecure: !!p['skip-cert-verify'],
+        alpn: toArray(p.alpn),
+      };
       return createHysteria2Node({
         ...common,
         password: p.password,
+        tls,
         obfs,
         auth: p.auth,
         up: p.up,
@@ -119,26 +139,44 @@ import {
         alpn: toArray(p.alpn),
       });
     }
-     case 'tuic':
-       return createTuicNode({
-         ...common,
-         uuid: p.uuid,
-         password: p.password,
-         congestion_control: p['congestion-controller'] || p.congestion_control,
-         udp_relay_mode: p['udp-relay-mode'],
-         zero_rtt: p['zero-rtt'],
+    case 'tuic':
+      return createTuicNode({
+        ...common,
+        tls: {
+          enabled: true,
+          sni: p.sni || p.server,
+          server_name: p.sni || p.server,
+          insecure: !!p['skip-cert-verify'],
+          alpn: toArray(p.alpn),
+        },
+        uuid: p.uuid,
+        password: p.password,
+        congestion_control: p['congestion-controller'] || p.congestion_control,
+        udp_relay_mode: p['udp-relay-mode'],
+        zero_rtt: p['zero-rtt'],
          reduce_rtt: p['reduce-rtt'],
          fast_open: p['fast-open'],
          disable_sni: p['disable-sni'],
        });
-     case 'anytls':
-       return createAnytlsNode({
-         ...common,
-         password: p.password,
-         'idle-session-check-interval': p['idle-session-check-interval'],
-         'idle-session-timeout': p['idle-session-timeout'],
-         'min-idle-session': p['min-idle-session'],
-       });
+    case 'anytls':
+      return createAnytlsNode({
+        ...common,
+        tls: {
+          enabled: true,
+          sni: p.sni || p.server,
+          server_name: p.sni || p.server,
+          insecure: !!p['skip-cert-verify'],
+          alpn: toArray(p.alpn),
+          utls: p['client-fingerprint'] ? { fingerprint: p['client-fingerprint'] } : undefined,
+        },
+        password: p.password,
+        'idle-session-check-interval': p['idle-session-check-interval'],
+        'idle-session-timeout': p['idle-session-timeout'],
+        'min-idle-session': p['min-idle-session'],
+        idle_session_check_interval: p['idle-session-check-interval'],
+        idle_session_timeout: p['idle-session-timeout'],
+        min_idle_session: p['min-idle-session'],
+      });
      case 'http':
      case 'https':
        return createHttpNode({

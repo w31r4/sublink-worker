@@ -6,8 +6,10 @@ exports[`TuicParser > should parse a tuic URL with params 1`] = `
     "password": "password",
     "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   },
+  "congestion_control": "bbr",
   "host": "example.com",
   "kind": "tuic",
+  "password": "password",
   "port": 443,
   "proto": {
     "tuic": {
@@ -19,6 +21,9 @@ exports[`TuicParser > should parse a tuic URL with params 1`] = `
       "zero_rtt": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyTuicBbrNode",
   "tags": [
     "MyTuicBbrNode",
   ],
@@ -29,6 +34,9 @@ exports[`TuicParser > should parse a tuic URL with params 1`] = `
     "server_name": "sub.example.com",
     "sni": "sub.example.com",
   },
+  "type": "tuic",
+  "udp_relay_mode": "native",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;
@@ -39,8 +47,10 @@ exports[`TuicParser > should parse a typical tuic URL 1`] = `
     "password": "password",
     "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   },
+  "congestion_control": "bbr",
   "host": "example.com",
   "kind": "tuic",
+  "password": "password",
   "port": 443,
   "proto": {
     "tuic": {
@@ -52,6 +62,9 @@ exports[`TuicParser > should parse a typical tuic URL 1`] = `
       "zero_rtt": undefined,
     },
   },
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyTuicNode",
   "tags": [
     "MyTuicNode",
   ],
@@ -62,6 +75,9 @@ exports[`TuicParser > should parse a typical tuic URL 1`] = `
     "server_name": undefined,
     "sni": undefined,
   },
+  "type": "tuic",
+  "udp_relay_mode": "native",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;

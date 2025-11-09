@@ -1,8 +1,8 @@
 export function mapIRToXray(ir, original) {
   if (!ir) return null;
-  const auth = original?.auth || ir.auth || {};
-  const transport = original?.transport || ir.transport;
-  const tls = original?.tls || ir.tls;
+  const auth = ir.auth || original?.auth || {};
+  const transport = ir.transport || original?.transport;
+  const tls = ir.tls || original?.tls;
   const host = ir.host;
   const port = ir.port;
   const stream = buildStreamSettings(ir, transport, tls);

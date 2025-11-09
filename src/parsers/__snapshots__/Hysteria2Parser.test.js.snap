@@ -5,9 +5,19 @@ exports[`Hysteria2Parser > should parse a hysteria2 URL with params 1`] = `
   "auth": {
     "password": "password",
   },
+  "authPayload": undefined,
+  "down": undefined,
+  "fast_open": undefined,
+  "hop_interval": undefined,
   "host": "example.com",
   "kind": "hysteria2",
+  "obfs": {
+    "password": "obfspwd",
+    "type": "salamander",
+  },
+  "password": "password",
   "port": 443,
+  "ports": undefined,
   "proto": {
     "hy2": {
       "auth": undefined,
@@ -23,6 +33,10 @@ exports[`Hysteria2Parser > should parse a hysteria2 URL with params 1`] = `
       "up": undefined,
     },
   },
+  "recv_window_conn": undefined,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyHysteria2ObfsNode",
   "tags": [
     "MyHysteria2ObfsNode",
   ],
@@ -32,6 +46,8 @@ exports[`Hysteria2Parser > should parse a hysteria2 URL with params 1`] = `
     "server_name": "sub.example.com",
     "sni": "sub.example.com",
   },
+  "type": "hysteria2",
+  "up": undefined,
   "version": "1.0.0",
 }
 `;
@@ -41,9 +57,16 @@ exports[`Hysteria2Parser > should parse a typical hysteria2 URL 1`] = `
   "auth": {
     "password": "password",
   },
+  "authPayload": undefined,
+  "down": undefined,
+  "fast_open": undefined,
+  "hop_interval": undefined,
   "host": "example.com",
   "kind": "hysteria2",
+  "obfs": undefined,
+  "password": "password",
   "port": 443,
+  "ports": undefined,
   "proto": {
     "hy2": {
       "auth": undefined,
@@ -56,6 +79,10 @@ exports[`Hysteria2Parser > should parse a typical hysteria2 URL 1`] = `
       "up": undefined,
     },
   },
+  "recv_window_conn": undefined,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyHysteria2Node",
   "tags": [
     "MyHysteria2Node",
   ],
@@ -65,6 +92,8 @@ exports[`Hysteria2Parser > should parse a typical hysteria2 URL 1`] = `
     "server_name": undefined,
     "sni": undefined,
   },
+  "type": "hysteria2",
+  "up": undefined,
   "version": "1.0.0",
 }
 `;

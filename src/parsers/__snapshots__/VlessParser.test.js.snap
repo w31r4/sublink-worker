@@ -9,6 +9,9 @@ exports[`VlessParser > should parse a typical vless URL 1`] = `
   "kind": "vless",
   "network": "tcp",
   "port": 443,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyVlessNode",
   "tags": [
     "MyVlessNode",
   ],
@@ -22,6 +25,8 @@ exports[`VlessParser > should parse a typical vless URL 1`] = `
     "path": undefined,
     "type": undefined,
   },
+  "type": "vless",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;
@@ -35,6 +40,9 @@ exports[`VlessParser > should parse a vless URL with params 1`] = `
   "kind": "vless",
   "network": "ws",
   "port": 443,
+  "server": "example.com",
+  "server_port": 443,
+  "tag": "MyVlessWsNode",
   "tags": [
     "MyVlessWsNode",
   ],
@@ -48,6 +56,8 @@ exports[`VlessParser > should parse a vless URL with params 1`] = `
     "path": "/ws-path",
     "type": "ws",
   },
+  "type": "vless",
+  "uuid": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
   "version": "1.0.0",
 }
 `;
