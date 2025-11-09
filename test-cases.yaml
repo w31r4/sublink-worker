@@ -140,6 +140,189 @@ tests:
       typeCount:
         tuic: 1
 
+  - name: 泛用 YAML 配置解析（全部协议）
+    description: 使用 example 域名与占位凭据，覆盖 ss/vmess/vless/trojan/hysteria2/tuic/anytls 的 YAML 解析
+    input: |
+      proxies:
+        - name: SS-main
+          type: ss
+          server: ss.example.com
+          port: 1443
+          cipher: aes-128-gcm
+          password: ss-pass
+
+        - name: VMESS-main
+          type: vmess
+          server: vm.example.com
+          port: 2443
+          uuid: 11111111-2222-3333-4444-555555555555
+          tls: true
+          servername: vm.example.com
+          alpn:
+            - h2
+
+        - name: VLESS-main
+          type: vless
+          server: vl.example.com
+          port: 3443
+          uuid: 66666666-7777-8888-9999-000000000000
+          tls: true
+          servername: vl.example.com
+          alpn:
+            - h2
+          client-fingerprint: chrome
+          reality-opts:
+            public-key: PUBKEY-TEST
+            short-id: abcd
+
+        - name: TROJAN-main
+          type: trojan
+          server: tj.example.com
+          port: 4443
+          password: trojan-pass
+          tls: true
+          sni: tj.example.com
+          alpn:
+            - http/1.1
+
+        - name: HY2-main
+          type: hysteria2
+          server: hy.example.com
+          port: 5443
+          password: hy2-pass
+          sni: hy.example.com
+          obfs: salamander
+          obfs-password: hy2-obfs
+          hop-interval: 20
+          alpn:
+            - h3
+
+        - name: TUIC-main
+          type: tuic
+          server: tuic.example.com
+          port: 6443
+          uuid: 72e245c5-c681-4cbc-9ccd-7b10bb8f2c53
+          password: tuic-pass
+          sni: tuic.example.com
+          alpn:
+            - h3
+          congestion-controller: bbr
+          udp-relay-mode: native
+          zero-rtt: false
+          reduce-rtt: true
+          fast-open: true
+          skip-cert-verify: false
+
+        - name: ANYTLS-main
+          type: anytls
+          server: at.example.com
+          port: 7443
+          password: anytls-pass
+          udp: true
+          sni: at.example.com
+          alpn:
+            - h2
+          client-fingerprint: chrome
+          skip-cert-verify: false
+          idle-session-check-interval: 30
+          idle-session-timeout: 120
+          min-idle-session: 5
+    expected:
+      proxyCount: 7
+      proxyTags:
+        - SS-main
+        - VMESS-main
+        - VLESS-main
+        - TROJAN-main
+        - HY2-main
+        - TUIC-main
+        - ANYTLS-main
+      typeCount:
+        shadowsocks: 1
+        vmess: 1
+        vless: 1
+        trojan: 1
+        hysteria2: 1
+        tuic: 1
+        anytls: 1
+      proxyDetails:
+        - tag: SS-main
+          fields:
+            type: shadowsocks
+            server: ss.example.com
+            server_port: 1443
+            method: aes-128-gcm
+            password: ss-pass
+        - tag: VMESS-main
+          fields:
+            type: vmess
+            server: vm.example.com
+            server_port: 2443
+            uuid: 11111111-2222-3333-4444-555555555555
+            tls.enabled: true
+            tls.server_name: vm.example.com
+            alpn.0: h2
+        - tag: VLESS-main
+          fields:
+            type: vless
+            server: vl.example.com
+            server_port: 3443
+            uuid: 66666666-7777-8888-9999-000000000000
+            tls.enabled: true
+            tls.server_name: vl.example.com
+            tls.utls.fingerprint: chrome
+            tls.reality.enabled: true
+            tls.reality.public_key: PUBKEY-TEST
+            tls.reality.short_id: abcd
+            alpn.0: h2
+        - tag: TROJAN-main
+          fields:
+            type: trojan
+            server: tj.example.com
+            server_port: 4443
+            password: trojan-pass
+            tls.server_name: tj.example.com
+            alpn.0: http/1.1
+        - tag: HY2-main
+          fields:
+            type: hysteria2
+            server: hy.example.com
+            server_port: 5443
+            password: hy2-pass
+            tls.server_name: hy.example.com
+            obfs.type: salamander
+            obfs.password: hy2-obfs
+            hop_interval: 20
+            alpn.0: h3
+        - tag: TUIC-main
+          fields:
+            type: tuic
+            server: tuic.example.com
+            server_port: 6443
+            uuid: 72e245c5-c681-4cbc-9ccd-7b10bb8f2c53
+            password: tuic-pass
+            congestion_control: bbr
+            udp_relay_mode: native
+            zero_rtt: false
+            reduce_rtt: true
+            fast_open: true
+            tls.server_name: tuic.example.com
+            tls.alpn.0: h3
+        - tag: ANYTLS-main
+          fields:
+            type: anytls
+            server: at.example.com
+            server_port: 7443
+            password: anytls-pass
+            udp: true
+            tls.server_name: at.example.com
+            tls.insecure: false
+            tls.alpn.0: h2
+            tls.utls.fingerprint: chrome
+            idle-session-check-interval: 30
+            idle-session-timeout: 120
+            min-idle-session: 5
+
 golden:
   - name: Clash VLESS IR 映射
     target: clash
