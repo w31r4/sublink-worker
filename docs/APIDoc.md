@@ -25,28 +25,35 @@ https://your-worker-domain.workers.dev
 | `/surge` | GET | 生成 Surge 配置 (纯文本) |
 | `/xray-config` | GET | 生成 Xray JSON 配置 |
 | `/sub` | GET | 将输入/远程订阅统一转换为 Base64 (Xray 兼容) |
-| `/shorten` | GET | 为原始 URL 创建短链 |
-| `/shorten-v2` | GET | 仅保存查询串，适配 `/b|c|x|s/shortCode` 重定向 |
-| `/config` | POST | 保存自定义基础配置 (KV) |
+| `/shorten` | GET | 为原始 URL 创建短链（返回包含 `shortUrl` 的 JSON） |
+| `/shorten-v2` | GET | 仅保存查询串，返回短码以便 `/b|c|x|s/{code}` 重定向 |
+| `/config` | POST | 保存自定义基础配置 (KV，默认 30 天过期) |
 | `/resolve` | GET | 将短链恢复为原始链接 |
-| `/[b|c|x|s]/{code}` | GET | 根据短链前缀跳转到 Singbox/Clash/Xray/Surge 入口 |
+| `/:type(b|c|x|s)/{code}` | GET | 根据短链前缀跳转到 Singbox/Clash/Xray/Surge 入口 |
 
 ---
 
 ### 1. 生成配置
 
+`/singbox`、`/clash`、`/surge`、`/xray-config` 共用同一套查询参数：
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `config` | 是 | URL 编码后的内容，可包含多行代理链接、Base64 订阅或远程 http(s) 订阅地址（自动抓取并解码） |
+| `selectedRules` | 否 | 预设名称 `minimal` / `balanced` / `comprehensive`，或 URL 编码后的 JSON 数组（如 `["Google","Ad Block"]`） |
+| `customRules` | 否 | URL 编码后的 JSON 数组。字段：`site`, `ip`, `domain_suffix`, `domain_keyword`, `ip_cidr`, `protocol`, `name`（均为逗号分隔字符串） |
+| `group_by_country` | 否 | `true/false`，根据节点名称自动创建国家分组（默认 `false`） |
+| `lang` | 否 | 指定界面语言，支持 `zh-CN`、`en-US`、`fa`、`ru`，默认取请求头 `Accept-Language` |
+| `ua` | 否 | 抓取远程订阅时使用的 User-Agent，默认 `curl/7.74.0` |
+| `configId` | 否 | 通过 `/config` 保存的基础配置 ID（例如 `clash_abcd1234`），用于在生成结果中复用自己的基础配置 |
+
+> 自定义规则会在生成时位于预定义规则之前，便于覆盖默认行为；如果 `selectedRules` 为空则自动回退到 `minimal`。
+
 #### Sing-Box 配置
 
 - **URL**: `/singbox`
 - **方法**: GET
-- **参数**:
-  - `config` (必需): URL 编码字符串（代理链接/订阅/多行混合）
-  - `selectedRules` (可选): 预定义规则集名称，或 URL 编码后的 JSON
-  - `customRules` (可选): URL 编码后的 JSON，自定义规则数组
-  - `group_by_country` (可选): `true/false`，是否启用国家分组节点
-  - `lang` (可选): 语言代码，默认为请求头 `Accept-Language`
-  - `ua` (可选): 请求远程订阅时使用的 UA，默认 `curl/7.74.0`
-  - `configId` (可选): 通过 `/config` 保存的基础配置 ID
+- **响应类型**: `application/json`
 
 **示例**:
 ```
@@ -63,15 +70,15 @@ https://your-worker-domain.workers.dev
 
 - **URL**: `/surge`
 - **方法**: GET
-- **参数**: 同 `/singbox`，输出文本
+- **响应类型**: 纯文本（便于远程规则集订阅）
 
 #### Xray JSON 配置
 
 - **URL**: `/xray-config`
 - **方法**: GET
-- **参数**:
-  - 同 `/singbox`
-  - `use_balancer` (可选): `true/false`，是否为 Xray 自动创建最优路由器
+- **额外参数**:
+  - `use_balancer` (可选): `true/false`，是否启用自动流量分流器（默认 `false`）
+- **响应类型**: `application/json`
 
 #### Xray Base64 订阅
 
@@ -86,28 +93,52 @@ https://your-worker-domain.workers.dev
 
 ### 2. 缩短 URL
 
-- **URL**: `/shorten`
-- **方法**: GET
-- **参数**:
-  - `url` (必需): 需要缩短的原始 URL
+#### `/shorten`
 
-**示例**:
+- **方法**: GET
+- **参数**: `url` (必需) 需要缩短的原始 URL
+- **说明**: 适用于一次性分享的完整链接，请求后返回 JSON，包含可直接访问的 `shortUrl`
+
 ```
 /shorten?url=https%3A%2F%2Fexample.com%2Fvery-long-url
 ```
 
-**响应**:
+**响应示例**:
 ```json
 {
   "shortUrl": "https://your-worker-domain.workers.dev/s/abcdefg"
 }
 ```
 
+#### `/shorten-v2`
+
+- **方法**: GET
+- **参数**:
+  - `url` (必需): 需要缩短的原始 URL（通常是 `/singbox|clash|xray-config|surge` 链接）
+  - `shortCode` (可选): 自定义短码，不传则随机生成
+- **说明**: 仅保存查询字符串，并返回短码（纯文本）。可搭配 `/b|c|x|s/{code}` 前缀一次生成 Singbox / Clash / Xray / Surge 四种短链
+
+```
+/shorten-v2?url=https%3A%2F%2Fyour-worker-domain.workers.dev%2Fclash%3Fconfig%3Dvmess...&shortCode=myshare
+```
+
+**响应**:
+```
+myshare
+```
+
 ### 3. 重定向短 URL
 
-- **URL**: `/s/{shortCode}`
+- **URL**: `/:type(b|c|x|s)/{shortCode}`
 - **方法**: GET
-- **描述**: 重定向到与短代码关联的原始 URL
+- **描述**: 根据前缀跳转到对应客户端的订阅/配置入口，`shortCode` 由 `/shorten-v2` 返回
+
+| 前缀 | 目标端点 | 输出类型 |
+|------|----------|----------|
+| `b` | `/singbox` | JSON |
+| `c` | `/clash` | YAML |
+| `x` | `/sub` | Base64 文本 |
+| `s` | `/surge` | 纯文本 |
 
 ### 4. 保存 / 读取自定义基础配置
 
@@ -157,8 +188,8 @@ https://your-worker-domain.workers.dev/clash?config=vmess://xxx&configId=clash_a
 
 - **URL**: `/resolve`
 - **方法**: GET
-- **参数**: `url` (必需) 已生成的短链
-- **说明**: 返回 JSON `{ originalUrl }`
+- **参数**: `url` (必需) 由 `/b|c|x|s/{code}` 生成的短链（包含完整域名）
+- **说明**: 返回 JSON `{ "originalUrl": "https://your-worker-domain.workers.dev/clash?..."}`
 
 ---
 
@@ -170,7 +201,7 @@ API 支持以下预定义规则集:
 - `balanced`: 适中规则集
 - `comprehensive`: 完整规则集
 
-这些可以在 Sing-Box 和 Clash 配置的 `selectedRules` 参数中使用。
+这些可以在 Sing-Box / Clash / Surge / Xray 配置的 `selectedRules` 参数中使用。
 
 下面是目前支持的预定义规则集：
 
@@ -186,7 +217,6 @@ API 支持以下预定义规则集:
 | Telegram |  | telegram |
 | Microsoft | microsoft |  |
 | Apple | apple |  |
-| Bahamut | bahamut |  |
 | Social Media | facebook, instagram, twitter, tiktok, linkedin |  |
 | Streaming | netflix, hulu, disney, hbo, amazon |  |
 | Gaming | steam, epicgames, ea, ubisoft, blizzard |  |
@@ -194,6 +224,7 @@ API 支持以下预定义规则集:
 | Education | coursera, edx, udemy, khanacademy, category-scholar-!cn |  |
 | Financial | paypal, visa, mastercard, stripe, wise |  |
 | Cloud Services | aws, azure, digitalocean, heroku, dropbox |  |
+| Non-China | geolocation-!cn |  |
 
 Singbox 的规则集来自 [https://github.com/lyc8503/sing-box-rules](https://github.com/lyc8503/sing-box-rules), 感谢 lyc8503 的贡献!
 
@@ -224,8 +255,6 @@ Singbox 的规则集来自 [https://github.com/lyc8503/sing-box-rules](https://g
   }
 ]
 ```
-您还可以使用 `pin` 参数将自定义规则置于预定义规则之上，以便自定义规则生效。
-
 ## 错误处理
 
 API 在出现问题时将返回适当的 HTTP 状态码和错误消息:
@@ -236,21 +265,22 @@ API 在出现问题时将返回适当的 HTTP 状态码和错误消息:
 
 ## 使用说明 / 注意事项
 
-1. `config` 参数中的所有代理配置应进行 URL 编码。
-2. 可以在单个请求中包含多个代理配置,方法是在 URL 编码的 `config` 参数中用换行符 (`%0A`) 分隔它们。
-3. 使用自定义规则时,确保规则名称与自定义规则部分列出的名称完全匹配。
-4. `group_by_country=true` 会根据节点名称自动生成国家分组/图标，仅在 Clash/Singbox/Surge 生效。
-5. 缩短的 URL 旨在临时使用,可能在一定时间后过期。
+1. 将完整的订阅内容进行 URL 编码后放入 `config`，可混合多行代理、Base64 订阅或 http(s) 链接（会自动拉取并解析）。
+2. 多个代理可通过 `%0A` 分隔后放入同一个 `config` 参数。
+3. `selectedRules` 需匹配预定义规则表中的名称；未指定时默认 `minimal`。`customRules` 必须是有效的 JSON 数组，优先级高于预定义规则。
+4. `group_by_country=true` 会为 Singbox/Clash/Surge/Xray 自动创建国家分组，方便按地区选择。
+5. 通过 `/config` 取得的 `configId` 会在 30 天内可用，可在各生成端点通过 `configId` 参数复用，避免重复粘贴基础配置。
+6. 短链接存储在 KV 中，建议视作临时分享手段，长期使用请妥善备份原始 URL。
 
 ## 示例
 
-- 生成带有平衡规则集的 Sing-Box 配置:
+- 生成带有平衡规则集并启用国家分组的 Sing-Box 配置:
 
   ```
   /singbox?config=vmess%3A%2F%2Fxxx&selectedRules=balanced&group_by_country=true
   ```
 
-- 生成 Surge 文本配置：
+- 生成英文的 Surge 文本配置：
 
   ```
   /surge?config=vmess%3A%2F%2Fxxx&lang=en
@@ -261,19 +291,27 @@ API 在出现问题时将返回适当的 HTTP 状态码和错误消息:
   ```
   /sub?config=ss://xxx%0Avmess://yyy
   ```
-   ```
-   /singbox?config=vmess%3A%2F%2Fexample&selectedRules=balanced
-   ```
 
-2. 生成带有置顶自定义规则的 Clash 配置:
-   ```
-   /clash?config=vless%3A%2F%2Fexample&customRules=%5B%7B%22site%22%3A%22example.com%22%2C%22ip%22%3A%22192.168.1.1%22%2C%22domain_suffix%22%3A%22.com%22%2C%22domain_keyword%22%3A%22Mijia%20Cloud%22%2C%22ip_cidr%22%3A%2210.0.0.0%2F8%22%2C%22name%22%3A%22MyCustomRule%22%7D%5D&pin=true
-   ```
+- 带自定义规则的 Clash 配置：
 
-3. 缩短 URL:
-   ```
-   /shorten?url=https%3A%2F%2Fyour-worker-domain.workers.dev%2Fsingbox%3Fconfig%3Dvmess%253A%252F%252Fexample%26selectedRules%3Dbalanced
-   ```
+  ```
+  /clash?config=vless%3A%2F%2Fexample&customRules=%5B%7B%22site%22%3A%22example.com%22%2C%22ip%22%3A%22192.168.1.1%22%2C%22domain_suffix%22%3A%22.com%22%2C%22domain_keyword%22%3A%22Mijia%20Cloud%22%2C%22ip_cidr%22%3A%2210.0.0.0%2F8%22%2C%22protocol%22%3A%22http%22%2C%22name%22%3A%22MyCustomRule%22%7D%5D
+  ```
+
+- 使用 `/shorten-v2` 生成通用短码：
+
+  ```
+  GET /shorten-v2?url=https%3A%2F%2Fyour-worker-domain.workers.dev%2Fclash%3Fconfig%3D...&shortCode=myshare
+  ```
+
+  生成后即可访问：
+
+  ```
+  https://your-worker-domain.workers.dev/b/myshare   (Singbox)
+  https://your-worker-domain.workers.dev/c/myshare   (Clash)
+  https://your-worker-domain.workers.dev/x/myshare   (Xray Base64)
+  https://your-worker-domain.workers.dev/s/myshare   (Surge)
+  ```
 
 ## 结论
 

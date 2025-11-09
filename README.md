@@ -33,12 +33,13 @@ npm run deploy
 ## ✨ Features
 
 ### Supported Protocols
-- ShadowSocks
+- Shadowsocks (including legacy style URLs)
 - VMess
 - VLESS
-- Hysteria2
 - Trojan
+- Hysteria2
 - TUIC
+- Anytls
 
 ### Core Features
 - Support for importing Base64 http/https subscription links and various protocol sharing URLs
@@ -46,12 +47,14 @@ npm run deploy
 - Support for fixed/random short link generation (based on KV)
 - Light/Dark theme toggle
 - Flexible API, supporting script operations
-- Support for Chinese, English, and Persian languages
+- Parser → IR → Builder pipeline keeps protocol support consistent across clients
+- Support for Chinese, English, Persian, and Russian languages
 
 ### Client Support
 - Sing-Box
-- Clash
-- Xray/V2Ray
+- Clash / Clash.Meta
+- Surge
+- Xray / V2Ray
 
 ### Web Interface Features
 - User-friendly operation interface
@@ -63,12 +66,23 @@ npm run deploy
 For detailed API documentation, please refer to [APIDoc.md](/docs/APIDoc.md)
 
 ### Main Endpoints
-- `/singbox` - Generate Sing-Box configuration
-- `/clash` - Generate Clash configuration
-- `/xray` - Generate Xray configuration
-- `/shorten` - Generate short links
+- `/singbox` - Generate Sing-Box configuration (JSON)
+- `/clash` - Generate Clash configuration (YAML)
+- `/surge` - Generate Surge configuration (text)
+- `/xray-config` - Generate Xray configuration (JSON)
+- `/sub` - Convert input subscription into an Xray-compatible Base64 feed
+- `/shorten` - Legacy short-link endpoint (stores the full query string)
+- `/shorten-v2` - KV-backed short-link code generator for `/b|c|x|s/{code}`
+- `/config` (POST) - Persist custom base configurations into KV for 30 days
+- `/resolve` - Expand a previously generated short link back to its original URL/query
 
 ## 📝 Recent Updates
+
+### 2025-11-09
+
+- Switched to the Parser → IR → Builder architecture; builders now consume a unified IR
+- Added the Surge builder and completed TUIC/Hysteria2/Anytls mappings for every client
+- New docs: `docs/ARCHITECTURE.md` and `docs/MAINTENANCE.md`
 
 ### 2025-09-28
 
@@ -78,21 +92,30 @@ For detailed API documentation, please refer to [APIDoc.md](/docs/APIDoc.md)
 ## 🔧 Project Structure
 
 ```
-.
-├── index.js                 # Main server logic, handles request routing
-├── BaseConfigBuilder.js     # Build base configuration
-├── SingboxConfigBuilder.js  # Build Sing-Box configuration
-├── ClashConfigBuilder.js    # Build Clash configuration
-├── ProxyParsers.js          # Parse URLs of various proxy protocols
-├── utils.js                 # Provide various utility functions
-├── htmlBuilder.js           # Generate Web interface
-├── style.js                 # Generate CSS for Web interface
-├── config.js                # Store configuration information
-└── docs/
-    ├── APIDoc.md            # API documentation
-    ├── UpdateLogs.md        # Update logs
-    ├── FAQ.md               # Frequently asked questions
-    └── BaseConfig.md        # Basic configuration feature introduction
+src/
+├── index.js                 # Worker entry, registers routes
+├── handlers.js              # Request handlers + builder orchestration
+├── parsers/                 # Protocol parsers that emit IR nodes
+│   └── index.js             # Parser chain dispatcher
+├── ir/
+│   ├── factory.js           # createVmessNode/createTuicNode/... helpers
+│   └── maps/                # mapIRToClash/Singbox/Surge/Xray
+├── BaseConfigBuilder.js     # Shared builder utilities
+├── SingboxConfigBuilder.js  # Sing-Box builder
+├── ClashConfigBuilder.js    # Clash builder
+├── SurgeConfigBuilder.js    # Surge builder
+├── XrayConfigBuilder.js     # Xray builder
+├── htmlBuilder.js           # Web UI generator
+├── utils.js / style.js      # Helper utilities & CSS
+└── config.js                # Rule-set metadata and presets
+
+docs/
+├── APIDoc.md                # API documentation
+├── ARCHITECTURE.md          # Parser → IR → Builder overview
+├── MAINTENANCE.md           # Contributor/maintenance guide
+├── BaseConfig.md            # Custom base config instructions
+├── UpdateLogs.md            # Release history
+└── FAQ.md                   # Frequently asked questions
 ```
 
 ## 🤝 Contribution
