@@ -86,11 +86,62 @@ const generateForm = () => `
   </form>
 `;
 
-// 生成分享链接输入区域
+// 生成输入区域（多模式：链接 / 结构化配置 / 规范化输入）
 const generateShareUrlsSection = () => `
   <div class="form-section">
-    <div class="form-section-title">${t('shareUrls')}</div>
-    <textarea class="form-control" id="inputTextarea" name="input" required placeholder="${t('urlPlaceholder')}" rows="3"></textarea>
+    <div class="form-section-title d-flex align-items-center justify-content-between">
+      <span>${t('shareUrls')}</span>
+      <small class="text-muted">${t('inputMode')}</small>
+    </div>
+
+    <div class="input-modes-tabs">
+      <button type="button" class="input-modes-tab active" id="inputModeTab-links" onclick="switchInputMode('links')">${t('inputModeLinks')}</button>
+      <button type="button" class="input-modes-tab" id="inputModeTab-structured" onclick="switchInputMode('structured')">${t('inputModeStructured')}</button>
+      <button type="button" class="input-modes-tab" id="inputModeTab-normalized" onclick="switchInputMode('normalized')">${t('inputModeNormalized')}</button>
+    </div>
+
+    <div class="input-modes-content">
+      <div class="input-mode-view active" id="inputModeView-links">
+        <textarea class="form-control" id="inputLinksTextarea" placeholder="${t('linksPlaceholder')}" rows="4"></textarea>
+        <div class="text-muted mt-2" style="font-size: 0.9rem;">
+          ${t('linksHint')}
+        </div>
+      </div>
+
+      <div class="input-mode-view" id="inputModeView-structured">
+        <textarea class="form-control" id="inputStructuredTextarea" placeholder="${t('structuredPlaceholder')}" rows="10"></textarea>
+        <div class="text-muted mt-2" style="font-size: 0.9rem;">
+          ${t('structuredHint')}
+        </div>
+      </div>
+
+      <div class="input-mode-view" id="inputModeView-normalized">
+        <div class="conversion-controls">
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNormalizedNode()">
+            <i class="fas fa-plus me-1"></i>${t('addNode')}
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="generateNormalizedPreview()">
+            <i class="fas fa-code me-1"></i>${t('generatePreview')}
+          </button>
+          <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearNormalizedNodes()">
+            <i class="fas fa-trash me-1"></i>${t('clearAll')}
+          </button>
+        </div>
+
+        <div id="normalizedNodes"></div>
+
+        <div id="normalizedEmptyMessage" class="empty-state" style="display: none;">
+          <i class="fas fa-plus-circle fa-2x mb-2"></i>
+          <p>${t('noNodesYet')}</p>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label">${t('generatedConfig')}</label>
+          <textarea class="form-control" id="normalizedPreview" rows="10" readonly placeholder="${t('generatedConfigPlaceholder')}"></textarea>
+          <div class="json-validation-message" id="normalizedValidationMessage" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 `;
 
@@ -195,6 +246,7 @@ const generateScripts = () => `
     ${advancedOptionsToggleFunction()}
     ${applyPredefinedRulesFunction()}
     ${tooltipFunction()}
+    ${inputModeFunctions()}
     ${submitFormFunction()}
     ${customRuleFunctions()}
     ${generateQRCodeFunction()}
@@ -635,29 +687,338 @@ const tooltipFunction = () => `
   document.addEventListener('DOMContentLoaded', initTooltips);
 `;
 
+// 输入模式相关功能（链接 / 结构化 / 规范化输入）
+const inputModeFunctions = () => `
+  function getCurrentInputMode() {
+    return localStorage.getItem('inputMode') || 'links';
+  }
+
+  function switchInputMode(mode) {
+    const m = ['links', 'structured', 'normalized'].includes(mode) ? mode : 'links';
+    localStorage.setItem('inputMode', m);
+
+    // tab styles
+    document.querySelectorAll('.input-modes-tab').forEach(btn => btn.classList.remove('active'));
+    const activeTab = document.getElementById('inputModeTab-' + m);
+    if (activeTab) activeTab.classList.add('active');
+
+    // views
+    document.querySelectorAll('.input-mode-view').forEach(view => view.classList.remove('active'));
+    const activeView = document.getElementById('inputModeView-' + m);
+    if (activeView) activeView.classList.add('active');
+
+    if (m === 'normalized') {
+      renderNormalizedEmptyMessage();
+      const raw = localStorage.getItem('normalizedRawConfig');
+      const preview = document.getElementById('normalizedPreview');
+      if (raw && preview && !preview.value.trim()) {
+        preview.value = raw;
+      }
+    }
+  }
+
+  function guessInputModeFromConfig(configText) {
+    const text = (configText || '').trim();
+    if (!text) return 'links';
+
+    // JSON normalized / structured
+    try {
+      const obj = JSON.parse(text);
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        if (typeof obj.version === 'string' && Array.isArray(obj.nodes)) return 'normalized';
+        if (Array.isArray(obj.proxies) || Array.isArray(obj.outbounds)) return 'structured';
+      }
+    } catch (_) {}
+
+    // YAML-ish structured
+    if (/^\s*(proxies|outbounds)\s*:/m.test(text)) return 'structured';
+
+    return 'links';
+  }
+
+  function getSelectedInputString() {
+    const mode = getCurrentInputMode();
+
+    if (mode === 'structured') {
+      return (document.getElementById('inputStructuredTextarea')?.value || '').trim();
+    }
+
+    if (mode === 'normalized') {
+      // ensure preview is up to date when generating links
+      generateNormalizedPreview(false);
+      return (document.getElementById('normalizedPreview')?.value || '').trim();
+    }
+
+    return (document.getElementById('inputLinksTextarea')?.value || '').trim();
+  }
+
+  function renderNormalizedEmptyMessage() {
+    const container = document.getElementById('normalizedNodes');
+    const empty = document.getElementById('normalizedEmptyMessage');
+    if (!container || !empty) return;
+    const has = container.querySelectorAll('.normalized-node').length > 0;
+    empty.style.display = has ? 'none' : 'block';
+  }
+
+  function addNormalizedNode(prefill) {
+    const container = document.getElementById('normalizedNodes');
+    if (!container) return;
+
+    const nodeDiv = document.createElement('div');
+    nodeDiv.className = 'normalized-node mb-3 p-3 border rounded';
+    nodeDiv.innerHTML = \
+      '<div class="d-flex justify-content-between align-items-center mb-2">' +
+        '<h6 class="mb-0">${t('node')}</h6>' +
+        '<button type="button" class="btn btn-danger btn-sm" onclick="removeNormalizedNode(this)">' +
+          '<i class="fas fa-times"></i>' +
+        '</button>' +
+      '</div>' +
+
+      '<div class="row">' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('nodeKind')} *</label>' +
+          '<select class="form-select" data-field="kind">' +
+            '<option value="">${t('pleaseSelect')}</option>' +
+            '<option value="vmess">vmess</option>' +
+            '<option value="vless">vless</option>' +
+            '<option value="trojan">trojan</option>' +
+            '<option value="shadowsocks">shadowsocks</option>' +
+            '<option value="hysteria2">hysteria2</option>' +
+            '<option value="tuic">tuic</option>' +
+            '<option value="anytls">anytls</option>' +
+            '<option value="http">http</option>' +
+            '<option value="https">https</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('nodeTag')} *</label>' +
+          '<input type="text" class="form-control" data-field="tag" placeholder="${t('nodeTagPlaceholder')}">' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('nodeHost')} *</label>' +
+          '<input type="text" class="form-control" data-field="host" placeholder="example.com">' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="row">' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('nodePort')} *</label>' +
+          '<input type="number" class="form-control" data-field="port" placeholder="443" min="1" max="65535">' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">UUID</label>' +
+          '<input type="text" class="form-control" data-field="uuid" placeholder="${t('uuidPlaceholder')}">' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('password')}</label>' +
+          '<input type="text" class="form-control" data-field="password" placeholder="${t('passwordPlaceholder')}">' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="row">' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('method')}</label>' +
+          '<input type="text" class="form-control" data-field="method" placeholder="aes-128-gcm">' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('username')}</label>' +
+          '<input type="text" class="form-control" data-field="username" placeholder="${t('usernamePlaceholder')}">' +
+        '</div>' +
+        '<div class="col-md-4 mb-2">' +
+          '<label class="form-label">${t('notes')}</label>' +
+          '<input type="text" class="form-control" data-field="name" placeholder="${t('notesPlaceholder')}">' +
+        '</div>' +
+      '</div>';
+
+    container.appendChild(nodeDiv);
+
+    if (prefill && typeof prefill === 'object') {
+      Object.entries(prefill).forEach(([k, v]) => {
+        const el = nodeDiv.querySelector('[data-field="' + k + '"]');
+        if (el) el.value = v;
+      });
+    }
+
+    nodeDiv.querySelectorAll('input,select').forEach(el => {
+      el.addEventListener('input', () => generateNormalizedPreview(false));
+      el.addEventListener('change', () => generateNormalizedPreview(false));
+    });
+
+    renderNormalizedEmptyMessage();
+  }
+
+  function removeNormalizedNode(button) {
+    const nodeDiv = button.closest('.normalized-node');
+    if (nodeDiv) nodeDiv.remove();
+    renderNormalizedEmptyMessage();
+    generateNormalizedPreview(false);
+  }
+
+  function clearNormalizedNodes(confirmClear = true) {
+    if (confirmClear && !confirm('${t('confirmClearAllNodes')}')) return;
+    const container = document.getElementById('normalizedNodes');
+    if (container) {
+      container.querySelectorAll('.normalized-node').forEach(n => n.remove());
+    }
+    localStorage.removeItem('normalizedNodes');
+    localStorage.removeItem('normalizedRawConfig');
+    const preview = document.getElementById('normalizedPreview');
+    if (preview) preview.value = '';
+    const msg = document.getElementById('normalizedValidationMessage');
+    if (msg) msg.style.display = 'none';
+    renderNormalizedEmptyMessage();
+  }
+
+  function getNormalizedNodesFromDOM() {
+    const container = document.getElementById('normalizedNodes');
+    if (!container) return [];
+    const nodes = [];
+    container.querySelectorAll('.normalized-node').forEach(nodeDiv => {
+      const get = (field) => (nodeDiv.querySelector('[data-field="' + field + '"]')?.value || '').trim();
+
+      const kind = get('kind');
+      const tag = get('tag') || get('name');
+      const host = get('host');
+      const portRaw = get('port');
+
+      const n = {
+        kind,
+        tag,
+        name: get('name'),
+        host,
+        port: portRaw ? Number(portRaw) : portRaw,
+      };
+
+      const uuid = get('uuid');
+      const password = get('password');
+      const method = get('method');
+      const username = get('username');
+
+      if (uuid) n.uuid = uuid;
+      if (password) n.password = password;
+      if (method) n.method = method;
+      if (username) n.username = username;
+
+      nodes.push(n);
+    });
+    return nodes;
+  }
+
+  function validateNormalizedNodes(nodes) {
+    if (!Array.isArray(nodes) || nodes.length === 0) {
+      return { ok: false, message: '${t('noNodesError')}' };
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i] || {};
+      if (!n.kind) return { ok: false, message: 'nodes[' + i + '].kind: ${t('required')}' };
+      if (!n.tag) return { ok: false, message: 'nodes[' + i + '].tag: ${t('required')}' };
+      if (!n.host) return { ok: false, message: 'nodes[' + i + '].host: ${t('required')}' };
+
+      const port = Number(n.port);
+      if (!Number.isFinite(port) || port <= 0) return { ok: false, message: 'nodes[' + i + '].port: ${t('invalidPort')}' };
+
+      const kind = String(n.kind).toLowerCase();
+      if ((kind === 'vmess' || kind === 'vless') && !n.uuid) {
+        return { ok: false, message: 'nodes[' + i + '].uuid: ${t('required')}' };
+      }
+      if ((kind === 'trojan' || kind === 'hysteria2' || kind === 'anytls') && !n.password) {
+        return { ok: false, message: 'nodes[' + i + '].password: ${t('required')}' };
+      }
+      if (kind === 'shadowsocks') {
+        if (!n.password) return { ok: false, message: 'nodes[' + i + '].password: ${t('required')}' };
+        if (!n.method) return { ok: false, message: 'nodes[' + i + '].method: ${t('required')}' };
+      }
+      if (kind === 'tuic') {
+        if (!n.uuid) return { ok: false, message: 'nodes[' + i + '].uuid: ${t('required')}' };
+        if (!n.password) return { ok: false, message: 'nodes[' + i + '].password: ${t('required')}' };
+      }
+    }
+
+    return { ok: true, message: '' };
+  }
+
+  function setNormalizedValidationMessage(ok, message) {
+    const msg = document.getElementById('normalizedValidationMessage');
+    if (!msg) return;
+
+    msg.style.display = 'block';
+    msg.classList.remove('valid', 'invalid');
+    msg.classList.add(ok ? 'valid' : 'invalid');
+    msg.textContent = ok ? ('✓ ${t('validJSON')}') : ('✗ ' + message);
+  }
+
+  function generateNormalizedPreview(showAlerts = true) {
+    const nodes = getNormalizedNodesFromDOM();
+    const validation = validateNormalizedNodes(nodes);
+
+    const preview = document.getElementById('normalizedPreview');
+    if (!preview) return;
+
+    if (!validation.ok) {
+      preview.value = '';
+      setNormalizedValidationMessage(false, validation.message);
+      if (showAlerts) {
+        alert(validation.message);
+      }
+      return;
+    }
+
+    const obj = { version: '1', nodes };
+    const json = JSON.stringify(obj, null, 2);
+    preview.value = json;
+    localStorage.setItem('normalizedNodes', JSON.stringify(nodes));
+    localStorage.setItem('normalizedRawConfig', json);
+    setNormalizedValidationMessage(true, '');
+  }
+
+  // init
+  document.addEventListener('DOMContentLoaded', function() {
+    switchInputMode(getCurrentInputMode());
+
+    // restore normalized nodes
+    try {
+      const saved = localStorage.getItem('normalizedNodes');
+      if (saved) {
+        const nodes = JSON.parse(saved);
+        if (Array.isArray(nodes)) {
+          nodes.forEach(n => addNormalizedNode(n));
+        }
+      }
+    } catch (_) {}
+
+    renderNormalizedEmptyMessage();
+  });
+`;
+
 // 表单提交处理逻辑
 const submitFormFunction = () => `
   function submitForm(event) {
     event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    const inputString = formData.get('input');
+
+    const inputMode = getCurrentInputMode();
+    const inputString = getSelectedInputString();
+    if (!inputString || !String(inputString).trim()) {
+      alert('${t('missingInput')}');
+      return;
+    }
 
     const userAgent = document.getElementById('customUA').value;
     const groupByCountry = document.getElementById('groupByCountry').checked;
-    
-    // Save form data to localStorage
+
+    // Save form data to localStorage (compat: keep key inputTextarea)
+    localStorage.setItem('inputMode', inputMode);
     localStorage.setItem('inputTextarea', inputString);
     localStorage.setItem('advancedToggle', document.getElementById('advancedToggle').checked);
     localStorage.setItem('groupByCountry', groupByCountry);
 
     // Save UserAgent data to localStorage
     localStorage.setItem('userAgent', document.getElementById('customUA').value);
-    
+
     // Save configEditor and configType to localStorage
     localStorage.setItem('configEditor', document.getElementById('configEditor').value);
     localStorage.setItem('configType', document.getElementById('configType').value);
-    
+
     let selectedRules;
     const predefinedRules = document.getElementById('predefinedRules').value;
     if (predefinedRules !== 'custom') {
@@ -666,17 +1027,16 @@ const submitFormFunction = () => `
       selectedRules = Array.from(document.querySelectorAll('input[name="selectedRules"]:checked'))
         .map(checkbox => checkbox.value);
     }
-    
-    const configEditor = document.getElementById('configEditor');
-    const configId = new URLSearchParams(window.location.search).get('configId') || '';
 
+    const configId = new URLSearchParams(window.location.search).get('configId') || '';
     const customRules = parseCustomRules();
 
     const configParam = configId ? \`&configId=\${configId}\` : '';
     const groupByCountryParam = groupByCountry ? '&group_by_country=true' : '';
     const selectedRulesParam = \`&selectedRules=\${encodeURIComponent(JSON.stringify(selectedRules))}\`;
     const customRulesParam = \`&customRules=\${encodeURIComponent(JSON.stringify(customRules))}\`;
-    const builderParams = \`\${selectedRulesParam}\${customRulesParam}\${configParam}\${groupByCountryParam}\`;
+    const inputModeParam = inputMode ? \`&input_mode=\${encodeURIComponent(inputMode)}\` : '';
+    const builderParams = \`\${selectedRulesParam}\${customRulesParam}\${configParam}\${groupByCountryParam}\${inputModeParam}\`;
 
     const xrayUrl = \`\${window.location.origin}/sub?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\`;
     const singboxUrl = \`\${window.location.origin}/singbox?config=\${encodeURIComponent(inputString)}&ua=\${encodeURIComponent(userAgent)}\${builderParams}\`;
@@ -687,6 +1047,7 @@ const submitFormFunction = () => `
     document.getElementById('singboxLink').value = singboxUrl;
     document.getElementById('clashLink').value = clashUrl;
     document.getElementById('surgeLink').value = surgeUrl;
+
     // Show the subscribe part
     const subscribeLinksContainer = document.getElementById('subscribeLinksContainer');
     subscribeLinksContainer.classList.remove('hide');
@@ -706,7 +1067,24 @@ const submitFormFunction = () => `
       const config = params.get('config');
       if (config) {
         const decodedConfig = decodeURIComponent(config);
-        document.getElementById('inputTextarea').value = decodedConfig;
+        const forcedMode = params.get('input_mode');
+
+        const guessed = guessInputModeFromConfig(decodedConfig);
+        const mode = (forcedMode && ['links','structured','normalized'].includes(forcedMode)) ? forcedMode : guessed;
+        switchInputMode(mode);
+
+        if (mode === 'structured') {
+          const el = document.getElementById('inputStructuredTextarea');
+          if (el) el.value = decodedConfig;
+        } else if (mode === 'normalized') {
+          // 暂不做字段级反序列化，先把 JSON 放到预览区，确保可复制与可直接生成链接
+          const previewEl = document.getElementById('normalizedPreview');
+          if (previewEl) previewEl.value = decodedConfig;
+          localStorage.setItem('normalizedRawConfig', decodedConfig);
+        } else {
+          const el = document.getElementById('inputLinksTextarea');
+          if (el) el.value = decodedConfig;
+        }
       }
 
       // Parse UserAgent
@@ -817,8 +1195,12 @@ const submitFormFunction = () => `
         const data = await response.json();
         const originalUrl = data.originalUrl;
         
-        // 用原始URL替换输入框中的短链
-        document.getElementById('inputTextarea').value = originalUrl;
+        // 用原始URL替换输入框中的短链（默认放到 links 模式）
+        switchInputMode('links');
+        const linksEl = document.getElementById('inputLinksTextarea');
+        if (linksEl) {
+          linksEl.value = originalUrl;
+        }
         
         // 解析原始URL到表单
         parseUrlAndFillForm(originalUrl);
@@ -836,36 +1218,61 @@ const submitFormFunction = () => `
 
   // Add input box event listener
   document.addEventListener('DOMContentLoaded', function() {
-    const inputTextarea = document.getElementById('inputTextarea');
-    let lastValue = '';
-    
-    inputTextarea.addEventListener('input', async function() {
-      const currentValue = this.value.trim();
-      
-      if (currentValue && currentValue !== lastValue) {
-        // 首先检查是否是短链
-        if (isShortUrl(currentValue)) {
-          await autoResolveShortUrl(currentValue);
+    const bindSmartInput = (textareaId) => {
+      const el = document.getElementById(textareaId);
+      if (!el) return;
+      let lastValue = '';
+
+      el.addEventListener('input', async function() {
+        const currentValue = this.value.trim();
+
+        if (currentValue && currentValue !== lastValue) {
+          // 首先检查是否是短链
+          if (isShortUrl(currentValue)) {
+            await autoResolveShortUrl(currentValue);
+          }
+          // 然后检查是否是项目生成的完整链接
+          else if (currentValue.includes('/singbox?') ||
+                   currentValue.includes('/clash?') ||
+                   currentValue.includes('/surge?') ||
+                   currentValue.includes('/xray-config?') ||
+                   currentValue.includes('/sub?')) {
+            parseUrlAndFillForm(currentValue);
+          }
         }
-        // 然后检查是否是项目生成的完整链接
-        else if (currentValue.includes('/singbox?') || 
-                 currentValue.includes('/clash?') || 
-                 currentValue.includes('/surge?') || 
-                 currentValue.includes('/xray-config?') ||
-                 currentValue.includes('/sub?')) {
-          parseUrlAndFillForm(currentValue);
-        }
-      }
-      
-      lastValue = currentValue;
-    });
+
+        lastValue = currentValue;
+      });
+    };
+
+    bindSmartInput('inputLinksTextarea');
+    bindSmartInput('inputStructuredTextarea');
   });
 
   // 从localStorage加载已保存的表单数据
   function loadSavedFormData() {
     const savedInput = localStorage.getItem('inputTextarea');
+
+    // restore mode: prefer explicit mode, otherwise guess from content
+    const savedMode = localStorage.getItem('inputMode');
+    const mode = (savedMode && ['links','structured','normalized'].includes(savedMode))
+      ? savedMode
+      : guessInputModeFromConfig(savedInput || '');
+
+    switchInputMode(mode);
+
     if (savedInput) {
-      document.getElementById('inputTextarea').value = savedInput;
+      if (mode === 'structured') {
+        const structuredEl = document.getElementById('inputStructuredTextarea');
+        if (structuredEl) structuredEl.value = savedInput;
+      } else if (mode === 'normalized') {
+        const previewEl = document.getElementById('normalizedPreview');
+        if (previewEl) previewEl.value = savedInput;
+        localStorage.setItem('normalizedRawConfig', savedInput);
+      } else {
+        const linksEl = document.getElementById('inputLinksTextarea');
+        if (linksEl) linksEl.value = savedInput;
+      }
     }
 
     const advancedToggle = localStorage.getItem('advancedToggle');
@@ -935,16 +1342,22 @@ const submitFormFunction = () => `
 
   // 清除表单数据和localStorage中的缓存
   function clearFormData() {
+    localStorage.removeItem('inputMode');
     localStorage.removeItem('inputTextarea');
     localStorage.removeItem('advancedToggle');
     localStorage.removeItem('selectedRules');
     localStorage.removeItem('predefinedRules');
-    localStorage.removeItem('configEditor'); 
+    localStorage.removeItem('configEditor');
     localStorage.removeItem('configType');
     localStorage.removeItem('userAgent');
     localStorage.removeItem('groupByCountry');
     
-    document.getElementById('inputTextarea').value = '';
+    const linksEl = document.getElementById('inputLinksTextarea');
+    if (linksEl) linksEl.value = '';
+    const structuredEl = document.getElementById('inputStructuredTextarea');
+    if (structuredEl) structuredEl.value = '';
+
+    clearNormalizedNodes(false);
     document.getElementById('advancedToggle').checked = false;
     document.getElementById('advancedOptions').classList.remove('show');
     document.getElementById('groupByCountry').checked = false;

@@ -117,6 +117,60 @@ export const generateStyles = () => `
     color: var(--text-color);
   }
 
+  /* Input mode tabs (links / structured / normalized) */
+  .input-modes-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--input-border);
+    background-color: var(--card-bg);
+    border-radius: 10px 10px 0 0;
+    overflow: hidden;
+  }
+
+  .input-modes-tab {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: all 0.3s var(--transition-timing);
+    border-bottom: 3px solid transparent;
+    font-size: 0.95rem;
+  }
+
+  .input-modes-tab:hover {
+    background-color: var(--dropdown-hover-bg);
+    color: var(--dropdown-hover-text);
+  }
+
+  .input-modes-tab.active {
+    color: #6a11cb;
+    border-bottom-color: #6a11cb;
+    background-color: var(--dropdown-hover-bg);
+  }
+
+  [data-theme="dark"] .input-modes-tab.active {
+    color: #8a4fff;
+    border-bottom-color: #8a4fff;
+  }
+
+  .input-modes-content {
+    border: 1px solid var(--input-border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    background-color: var(--input-bg);
+    padding: 1rem;
+  }
+
+  .input-mode-view {
+    display: none;
+  }
+
+  .input-mode-view.active {
+    display: block;
+  }
+
   .input-group {
     margin-bottom: 1rem;
   }
