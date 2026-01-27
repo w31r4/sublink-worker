@@ -3,8 +3,204 @@ import { DeepCopy, tryDecodeSubscriptionLines, decodeBase64, parseCountryFromNod
 import yaml from 'js-yaml';
 import { t, setLanguage } from './i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from './config.js';
+import { convertSingboxOutboundToIR, SINGBOX_REAL_NODE_TYPES } from './parsers/singboxHelper.js';
+
+import {
+    createShadowsocksNode,
+    createVmessNode,
+    createVlessNode,
+    createTrojanNode,
+    createHysteria2Node,
+    createTuicNode,
+    createAnytlsNode,
+    createHttpNode,
+} from './ir/factory.js';
 
 import { convertYamlProxyToObject } from './parsers/yamlHelper.js';
+
+class InputValidationError extends Error {
+    constructor(message, details = {}) {
+        super(message);
+        this.name = 'InputValidationError';
+        this.details = details;
+        this.status = 400;
+    }
+}
+
+function isPlainObject(v) {
+    return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function formatNodeFieldError(index, field, reason) {
+    const prefix = typeof index === 'number' ? `nodes[${index}].${field}` : field;
+    return `${prefix}: ${reason}`;
+}
+
+function normalizeKind(kind) {
+    if (!kind) return '';
+    const k = String(kind).trim().toLowerCase();
+    if (k === 'ss') return 'shadowsocks';
+    if (k === 'hy2') return 'hysteria2';
+    return k;
+}
+
+function normalizeTagsForNode(n) {
+    if (!n) return [];
+    if (Array.isArray(n.tags)) return n.tags;
+    if (typeof n.tag === 'string' && n.tag.trim()) return [n.tag.trim()];
+    if (typeof n.name === 'string' && n.name.trim()) return [n.name.trim()];
+    return [];
+}
+
+function normalizeInputNodeToIR(node, index) {
+    if (!isPlainObject(node)) {
+        throw new InputValidationError(formatNodeFieldError(index, 'node', 'must be an object'), { index, field: 'node' });
+    }
+
+    const kind = normalizeKind(node.kind ?? node.type);
+    if (!kind) {
+        throw new InputValidationError(formatNodeFieldError(index, 'kind', 'is required'), { index, field: 'kind' });
+    }
+
+    const host = (node.host ?? node.server ?? node.address ?? '').toString().trim();
+    if (!host) {
+        throw new InputValidationError(formatNodeFieldError(index, 'host', 'is required'), { index, field: 'host' });
+    }
+
+    const portValue = node.port ?? node.server_port;
+    const port = Number(portValue);
+    if (!Number.isFinite(port) || port <= 0) {
+        throw new InputValidationError(formatNodeFieldError(index, 'port', 'must be a positive number'), { index, field: 'port' });
+    }
+
+    const tags = normalizeTagsForNode(node);
+    if (!Array.isArray(tags) || tags.length === 0) {
+        throw new InputValidationError(formatNodeFieldError(index, 'tag', 'tag or tags is required'), { index, field: 'tag' });
+    }
+
+    const common = {
+        host,
+        port,
+        tags,
+        udp: typeof node.udp !== 'undefined' ? node.udp : undefined,
+        network: node.network,
+        transport: node.transport,
+        tls: node.tls,
+        ext: node.ext,
+    };
+
+    try {
+        switch (kind) {
+            case 'vmess':
+                return createVmessNode({
+                    ...common,
+                    uuid: node.uuid ?? node.auth?.uuid,
+                    alter_id: node.alter_id ?? node.alterId,
+                    security: node.security ?? node.method ?? node.auth?.method,
+                });
+            case 'vless':
+                return createVlessNode({
+                    ...common,
+                    uuid: node.uuid ?? node.auth?.uuid,
+                    flow: node.flow,
+                    packet_encoding: node.packet_encoding ?? node.packetEncoding,
+                });
+            case 'trojan':
+                return createTrojanNode({
+                    ...common,
+                    password: node.password ?? node.auth?.password,
+                    flow: node.flow,
+                });
+            case 'shadowsocks':
+                return createShadowsocksNode({
+                    ...common,
+                    password: node.password ?? node.auth?.password,
+                    method: node.method ?? node.cipher ?? node.auth?.method,
+                });
+            case 'hysteria2':
+                return createHysteria2Node({
+                    ...common,
+                    password: node.password ?? node.auth?.password,
+                    tls: node.tls,
+                    obfs: node.obfs,
+                    auth: node.authPayload ?? node.auth,
+                    up: node.up,
+                    down: node.down,
+                    recv_window_conn: node.recv_window_conn,
+                    ports: node.ports,
+                    hop_interval: node.hop_interval,
+                    fast_open: node.fast_open,
+                    alpn: node.alpn,
+                });
+            case 'tuic':
+                return createTuicNode({
+                    ...common,
+                    uuid: node.uuid ?? node.auth?.uuid,
+                    password: node.password ?? node.auth?.password,
+                    congestion_control: node.congestion_control,
+                    udp_relay_mode: node.udp_relay_mode,
+                    zero_rtt: node.zero_rtt,
+                    reduce_rtt: node.reduce_rtt,
+                    fast_open: node.fast_open,
+                    disable_sni: node.disable_sni,
+                });
+            case 'anytls':
+                return createAnytlsNode({
+                    ...common,
+                    password: node.password ?? node.auth?.password,
+                    idle_session_check_interval: node.idle_session_check_interval,
+                    idle_session_timeout: node.idle_session_timeout,
+                    min_idle_session: node.min_idle_session,
+                });
+            case 'http':
+            case 'https':
+                return createHttpNode({
+                    ...common,
+                    kind,
+                    username: node.username ?? node.auth?.username,
+                    password: node.password ?? node.auth?.password,
+                });
+            default:
+                throw new InputValidationError(formatNodeFieldError(index, 'kind', `unsupported kind: ${kind}`), { index, field: 'kind' });
+        }
+    } catch (e) {
+        // 将工厂函数的错误包装为可定位错误
+        if (e instanceof InputValidationError) {
+            throw e;
+        }
+        throw new InputValidationError(formatNodeFieldError(index, kind, e?.message || 'invalid node'), { index, field: kind });
+    }
+}
+
+function parseNormalizedInputObject(obj) {
+    if (!isPlainObject(obj)) return null;
+
+    const hasVersion = Object.prototype.hasOwnProperty.call(obj, 'version');
+    const hasNodes = Object.prototype.hasOwnProperty.call(obj, 'nodes');
+    if (!hasVersion || !hasNodes) return null;
+
+    const version = obj.version;
+    if (typeof version !== 'string' || !version.trim()) {
+        throw new InputValidationError('version: must be a non-empty string', { field: 'version' });
+    }
+
+    const nodes = obj.nodes;
+    if (!Array.isArray(nodes)) {
+        throw new InputValidationError('nodes: must be an array', { field: 'nodes' });
+    }
+    if (nodes.length === 0) {
+        throw new InputValidationError('nodes: must not be empty', { field: 'nodes' });
+    }
+    if (nodes.length > 500) {
+        throw new InputValidationError('nodes: too many nodes (max 500)', { field: 'nodes' });
+    }
+
+    const irNodes = nodes.map((n, i) => normalizeInputNodeToIR(n, i)).filter(Boolean);
+    if (irNodes.length === 0) {
+        throw new InputValidationError('nodes: no valid nodes found', { field: 'nodes' });
+    }
+    return irNodes;
+}
 
 // 配置生成器的基类，定义了通用的构建流程和方法
 export class BaseConfigBuilder {
@@ -34,12 +230,21 @@ export class BaseConfigBuilder {
         const trimmedInput = input.trim();
         let parsedItems = [];
 
-        // 尝试将内容解析为 YAML 文档
-        const tryParseYamlDocument = (content) => {
+        // 尝试将内容解析为 YAML/JSON 对象（js-yaml 也可解析 JSON）
+        const tryParseStructuredDocument = (content) => {
             if (!content) return null;
             try {
                 const obj = yaml.load(content);
-                if (obj && typeof obj === 'object' && Array.isArray(obj.proxies)) {
+                if (!obj || typeof obj !== 'object') return null;
+
+                // 0) 优先：规范化输入对象 { version, nodes }
+                const normalized = parseNormalizedInputObject(obj);
+                if (normalized) {
+                    return normalized;
+                }
+
+                // 1) Clash: proxies
+                if (Array.isArray(obj.proxies)) {
                     const overrides = DeepCopy(obj);
                     delete overrides.proxies;
                     if (Object.keys(overrides).length > 0) {
@@ -52,19 +257,37 @@ export class BaseConfigBuilder {
                         return proxies;
                     }
                 }
+
+                // 2) Sing-box: outbounds
+                if (Array.isArray(obj.outbounds)) {
+                    const outbounds = obj.outbounds
+                        .filter(o => o && typeof o === 'object')
+                        .filter(o => SINGBOX_REAL_NODE_TYPES.has(String(o.type || '').toLowerCase()))
+                        .map(o => convertSingboxOutboundToIR(o))
+                        .filter(Boolean);
+                    if (outbounds.length > 0) {
+                        return outbounds;
+                    }
+                }
+
+                return null;
             } catch (e) {
-                // 忽略 YAML 解析错误，继续尝试其他方法
+                // 如果是我们认可的结构化输入形态，但校验失败，则应直接报错，不回退到按行解析
+                if (e instanceof InputValidationError) {
+                    throw e;
+                }
+                // 其他解析错误：忽略，继续尝试其他方法
             }
             return null;
         };
 
-        // 1) 尝试直接解析为 YAML
-        const directYamlItems = tryParseYamlDocument(trimmedInput);
-        if (directYamlItems) {
-            return directYamlItems;
+        // 1) 尝试直接解析为 YAML/JSON 对象
+        const directStructuredItems = tryParseStructuredDocument(trimmedInput);
+        if (directStructuredItems) {
+            return directStructuredItems;
         }
 
-        // 2) 如果输入看起来像 Base64，则解码后再次尝试解析为 YAML
+        // 2) 如果输入看起来像 Base64，则解码后再次尝试解析为 YAML/JSON 对象
         const sanitized = input.replace(/\s+/g, '');
         const maybeBase64 =
             sanitized.length > 0 &&
@@ -74,12 +297,16 @@ export class BaseConfigBuilder {
             try {
                 const decoded = decodeBase64(sanitized);
                 if (typeof decoded === 'string') {
-                    const decodedYamlItems = tryParseYamlDocument(decoded.trim());
-                    if (decodedYamlItems) {
-                        return decodedYamlItems;
+                    const decodedStructuredItems = tryParseStructuredDocument(decoded.trim());
+                    if (decodedStructuredItems) {
+                        return decodedStructuredItems;
                     }
                 }
             } catch (e) {
+                // 如果是结构化输入校验错误，直接抛出
+                if (e instanceof InputValidationError) {
+                    throw e;
+                }
                 // 忽略解码错误
             }
         }
@@ -97,11 +324,14 @@ export class BaseConfigBuilder {
                     try {
                         const response = await fetch(decodedLine, { headers: { 'User-Agent': this.userAgent } });
                         const text = await response.text();
-                        const remoteYamlItems = tryParseYamlDocument(text?.trim());
-                        if (remoteYamlItems) {
-                            parsedItems.push(...remoteYamlItems);
+
+                        // 远程内容也尝试结构化解析（Clash proxies / 规范化输入对象 / 未来的 sing-box outbounds）
+                        const remoteStructuredItems = tryParseStructuredDocument(text?.trim());
+                        if (remoteStructuredItems) {
+                            parsedItems.push(...remoteStructuredItems);
                             continue;
                         }
+
                         let subLines = tryDecodeSubscriptionLines(text);
                         if (!Array.isArray(subLines)) subLines = [subLines];
                         for (const subLine of subLines) {
@@ -109,6 +339,10 @@ export class BaseConfigBuilder {
                             if (proxy) parsedItems.push(proxy);
                         }
                     } catch (e) {
+                        // 结构化输入校验错误应直接暴露给调用方
+                        if (e instanceof InputValidationError) {
+                            throw e;
+                        }
                         console.warn(`获取或处理订阅失败: ${decodedLine}`, e);
                     }
                 } else { // 单个代理链接

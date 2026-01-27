@@ -10,7 +10,8 @@ import { t } from './i18n/index.js';
 export class SingboxConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false) {
         // 如果没有提供基础配置，则使用默认的 Sing-box 配置
-        if (baseConfig === undefined) {
+        // 兼容：null 也视为未提供
+        if (baseConfig == null) {
             baseConfig = SING_BOX_CONFIG;
             if (baseConfig.dns && baseConfig.dns.servers) {
                 // 更新 DNS 配置中的绕过选项

@@ -73,9 +73,22 @@ async function handleConfig(request, builderClass, format, builderOptions = {}) 
     if (builderClass === SurgeConfigBuilder) {
         configBuilder.setSubscriptionUrl(url.href);
     }
-    
-    // 构建配置
-    const config = await configBuilder.build();
+
+    // 构建配置（对输入校验错误提供友好响应）
+    let config;
+    try {
+        config = await configBuilder.build();
+    } catch (error) {
+        const status = Number(error?.status);
+        if (status === 400 || error?.name === 'InputValidationError') {
+            const message = error?.message || t('invalidFormat');
+            return new Response(message, {
+                status: 400,
+                headers: { 'content-type': 'text/plain; charset=utf-8' },
+            });
+        }
+        throw error;
+    }
 
     // 设置响应头
     const headers = {
