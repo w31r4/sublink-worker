@@ -744,9 +744,20 @@ const inputModeFunctions = () => `
     }
 
     if (mode === 'normalized') {
-      // ensure preview is up to date when generating links
-      generateNormalizedPreview(false);
-      return (document.getElementById('normalizedPreview')?.value || '').trim();
+      const previewEl = document.getElementById('normalizedPreview');
+      const container = document.getElementById('normalizedNodes');
+      const hasNodes = !!(container && container.querySelectorAll('.normalized-node').length > 0);
+
+      // If user is using the guided form, regenerate preview from DOM.
+      // If the user pasted a normalized JSON config and we haven't deserialized it into nodes,
+      // keep the preview as-is (do not clear it by validating empty nodes).
+      if (hasNodes) {
+        generateNormalizedPreview(false);
+        if (!((previewEl?.value || '').trim())) {
+          generateNormalizedPreview(true);
+        }
+      }
+      return (previewEl?.value || '').trim();
     }
 
     return (document.getElementById('inputLinksTextarea')?.value || '').trim();
