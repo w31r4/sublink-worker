@@ -35,10 +35,12 @@ router
   // 重定向路由，用于短链接跳转
   .on('GET', '/:type(b|c|x|s)/:shortCode', handleRedirect);
 
-// Cloudflare Worker 的 fetch 事件监听器
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request));
-});
+export default {
+  async fetch(request, env) {
+    globalThis.SUBLINK_KV = env.SUBLINK_KV;
+    return handleRequest(request);
+  },
+};
 
 // 处理传入的 HTTP 请求
 async function handleRequest(request) {
