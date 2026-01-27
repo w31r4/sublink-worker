@@ -26,4 +26,16 @@ describe('Router', () => {
     expect(response.status).toBe(404);
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it('escapes regex metacharacters in static path segments', async () => {
+    const router = new Router();
+    const handler = vi.fn(async () => new Response('ok'));
+    router.on('GET', '/favicon.ico', handler);
+
+    const request = new Request('https://example.com/faviconXico', { method: 'GET' });
+    const response = await router.route(request);
+
+    expect(response.status).toBe(404);
+    expect(handler).not.toHaveBeenCalled();
+  });
 });

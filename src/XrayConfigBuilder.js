@@ -4,6 +4,9 @@ import { mapIRToXray } from './ir/maps/xray.js';
 import { generateRules } from './config.js';
 import { parseCountryFromNodeName } from './utils.js';
 
+const RESERVED_OUTBOUND_TAGS = new Set(['DIRECT', 'REJECT']);
+const RESERVED_OUTBOUND_PROTOCOLS = new Set(['freedom', 'blackhole']);
+
 // Xray 配置生成器
 export class XrayConfigBuilder extends BaseConfigBuilder {
   constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, opts = {}) {
@@ -24,7 +27,13 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
 
   // 获取所有代理出站
   getProxies() {
-    return (this.config.outbounds || []).filter(o => typeof o?.tag === 'string');
+    return (this.config.outbounds || []).filter(o => {
+      const tag = typeof o?.tag === 'string' ? o.tag : '';
+      if (!tag) return false;
+      if (RESERVED_OUTBOUND_TAGS.has(tag)) return false;
+      if (RESERVED_OUTBOUND_PROTOCOLS.has(o?.protocol)) return false;
+      return true;
+    });
   }
 
   // 获取代理的名称 (tag)
@@ -66,6 +75,7 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
   addOutboundGroups() {}
   addCustomRuleGroups() {}
   addFallBackGroup() {}
+  addCountryGroups() {}
 
   // 格式化最终的 Xray 配置
   formatConfig() {
@@ -73,47 +83,52 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
     cfg.routing = cfg.routing || {};
     cfg.routing.rules = cfg.routing.rules || [];
 
-    // 如果启用，则创建基于国家/地区的负载均衡器
     const outbounds = this.getProxies();
-    const countryGroups = {};
-    outbounds.forEach(o => {
-      const info = parseCountryFromNodeName(o.tag || '');
-      if (info) {
-        const { name } = info;
-        if (!countryGroups[name]) countryGroups[name] = [];
-        countryGroups[name].push(o.tag);
-      }
-    });
-    const balancers = [];
     const allTags = outbounds.map(o => o.tag).filter(Boolean);
-    if (this.useBalancer || this.groupByCountry) {
-      if (allTags.length > 0) {
-        balancers.push({ tag: 'auto_select', selector: allTags, strategy: { type: 'leastPing' } });
-      }
+
+    const wantsBalancer = this.useBalancer || this.groupByCountry;
+    const enableBalancer = wantsBalancer && allTags.length > 0;
+
+    if (enableBalancer) {
+      // 如果启用，则创建基于国家/地区的负载均衡器
+      const countryGroups = {};
+      outbounds.forEach(o => {
+        const info = parseCountryFromNodeName(o.tag || '');
+        if (info) {
+          const { name } = info;
+          if (!countryGroups[name]) countryGroups[name] = [];
+          countryGroups[name].push(o.tag);
+        }
+      });
+
+      const balancers = [{ tag: 'auto_select', selector: allTags, strategy: { type: 'leastPing' } }];
       Object.entries(countryGroups).forEach(([name, tags]) => {
         if (tags.length > 0) balancers.push({ tag: `country_${name}`, selector: tags, strategy: { type: 'leastPing' } });
       });
-      if (balancers.length > 0) cfg.routing.balancers = balancers;
+      cfg.routing.balancers = balancers;
     }
+
+    const routeTarget = enableBalancer
+      ? { balancerTag: 'auto_select' }
+      : { outboundTag: allTags[0] || 'DIRECT' };
 
     // 根据选择的规则生成路由规则
     const rules = generateRules(this.selectedRules, this.customRules);
-    const defaultOutbound = (this.useBalancer || this.groupByCountry) ? 'auto_select' : (allTags[0] || 'DIRECT');
 
     rules.filter(r => Array.isArray(r.domain_suffix) || Array.isArray(r.domain_keyword) || (Array.isArray(r.site_rules) && r.site_rules[0] !== ''))
       .forEach(r => {
         const domain = [];
         (r.domain_suffix || []).forEach(s => domain.push(`domain:${s}`));
         (r.site_rules || []).forEach(s => { if (s) domain.push(`geosite:${s}`); });
-        cfg.routing.rules.push({ type: 'field', ...(domain.length ? { domain } : {}), outboundTag: defaultOutbound });
+        cfg.routing.rules.push({ type: 'field', ...(domain.length ? { domain } : {}), ...routeTarget });
       });
     rules.filter(r => Array.isArray(r.ip_rules) && r.ip_rules[0] !== '').forEach(r => {
       const ip = r.ip_rules.map(ipr => `geoip:${ipr}`);
-      cfg.routing.rules.push({ type: 'field', ip, outboundTag: defaultOutbound });
+      cfg.routing.rules.push({ type: 'field', ip, ...routeTarget });
     });
     rules.filter(r => Array.isArray(r.ip_cidr)).forEach(r => {
       const ip = r.ip_cidr;
-      cfg.routing.rules.push({ type: 'field', ip, outboundTag: defaultOutbound });
+      cfg.routing.rules.push({ type: 'field', ip, ...routeTarget });
     });
 
     // 添加默认规则，将中国大陆流量直连
@@ -121,7 +136,7 @@ export class XrayConfigBuilder extends BaseConfigBuilder {
     cfg.routing.rules.unshift({ type: 'field', ip: ['geoip:cn'], outboundTag: 'DIRECT' });
 
     // 最终的回退规则
-    cfg.routing.rules.push({ type: 'field', outboundTag: defaultOutbound });
+    cfg.routing.rules.push({ type: 'field', ...routeTarget });
 
     return cfg;
   }

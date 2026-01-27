@@ -175,3 +175,7 @@ test
 .editorconfig
 .prettierrc
 package-lock.json
+
+AGENTS.md
+openspec/
+.kilocode/

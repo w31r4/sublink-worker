@@ -8,12 +8,24 @@ export class Router {
   // 注册一个路由规则
   on(method, path, handler) {
     const paramNames = [];
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tokenRe = /:([A-Za-z0-9_]+)(\([^/]+\))?/g;
+    let regexSource = '^';
+    let lastIndex = 0;
+    let match;
+
     // 将路径字符串转换为正则表达式，并提取参数名称
-    const pattern = path.replace(/:([A-Za-z0-9_]+)(\([^/]+\))?/g, (_, name, customPattern) => {
+    while ((match = tokenRe.exec(path)) !== null) {
+      const [raw, name, customPattern] = match;
+      regexSource += escapeRegex(path.slice(lastIndex, match.index));
       paramNames.push(name);
-      return customPattern ? customPattern : '([^/]+)';
-    });
-    const regex = new RegExp(`^${pattern}$`);
+      regexSource += customPattern ? customPattern : '([^/]+)';
+      lastIndex = match.index + raw.length;
+    }
+    regexSource += escapeRegex(path.slice(lastIndex));
+    regexSource += '$';
+
+    const regex = new RegExp(regexSource);
     // 将路由信息存入数组
     this.routes.push({ method, regex, handler, paramNames });
     return this; // 支持链式调用
