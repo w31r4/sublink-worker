@@ -20,7 +20,7 @@ export const Form = (props) => {
 
   const translations = {
     ...Object.fromEntries(['managementTokenRequired', 'managementSameOrigin', 'managementCodeRequired',
-      'managementLoadFirst', 'managementLegacyLoaded', 'managementLoaded', 'managementSaved',
+      'managementLoadFirst', 'managementLegacyLoaded', 'managementLoaded', 'managementSaved', 'managementOverridesInvalid',
       'missingInput', 'invalidShortUrl'].map(key => [key, t(key)])),
     nodeSelectName: t('outboundNames.Node Select'),
     processing: t('processing'),

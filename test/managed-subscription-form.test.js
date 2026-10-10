@@ -85,4 +85,20 @@ describe('stable subscription form', () => {
         expect(dns['direct-nameserver']).toEqual([]);
         expect(dns.fallback).toEqual([]);
     });
+
+    it('preserves company DNS and unrelated overrides when applying the template', () => {
+        const { data } = form(vi.fn());
+        data.managedOverrides = JSON.stringify({ sniffer: { enable: true }, dns: {
+            'fake-ip-filter': ['+.corp.example'], 'nameserver-policy': { '+.corp.example': ['system'] }
+        } });
+        data.fillSplitDnsTemplate();
+        const overrides = JSON.parse(data.managedOverrides);
+        expect(overrides.sniffer.enable).toBe(true);
+        expect(overrides.dns['fake-ip-filter']).toEqual(['+.corp.example']);
+        expect(overrides.dns['nameserver-policy']['+.corp.example']).toEqual(['system']);
+        data.managedOverrides = 'invalid yaml: [';
+        data.fillSplitDnsTemplate();
+        expect(data.managedError).toBe(true);
+        expect(data.managedOverrides).toBe('invalid yaml: [');
+    });
 });

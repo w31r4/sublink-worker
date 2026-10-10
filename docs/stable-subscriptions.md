@@ -37,7 +37,7 @@ Cloudflare KV 是最终一致存储，修改可能需要 60 秒或更久才能�
 
 覆盖在节点生成之后应用：对象递归合并，数组替换，`null` 删除对应项。模板通过 `null` 清除旧的 geosite 国内/国外 DNS 分支，并清空旧 fallback/direct-nameserver，避免与新逻辑叠加；最终下载配置不含这些 `null` 项。其他 `nameserver-policy` 域名项（包括公司 DNS 例外）继续保留。节点、代理组、provider 和 rules 仍由原有转换表单管理，不能放进覆盖编辑框。参考：[Mihomo DNS 配置](https://wiki.metacubex.one/config/dns/)。
 
-企业 DNS 例外示例（不要给所有设备添加公司专属策略）：
+应用 DNS 模板会保留编辑框内的公司域名例外、嗅探、TUN 等其他覆盖项。企业 DNS 例外示例（不要给所有设备添加公司专属策略）：
 
 ```yaml
 dns:

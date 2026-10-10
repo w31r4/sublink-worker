@@ -102,6 +102,20 @@ export const managedSubscriptionLogic = () => ({
     },
 
     fillSplitDnsTemplate() {
+        let existing;
+        try {
+            const text = this.managedOverrides.trim() || '{}';
+            existing = window.jsyaml?.load ? window.jsyaml.load(text) : JSON.parse(text);
+            const isMap = value => value && typeof value === 'object' && !Array.isArray(value);
+            if (!isMap(existing) || ('dns' in existing && !isMap(existing.dns)) ||
+                (existing.dns && 'nameserver-policy' in existing.dns && !isMap(existing.dns['nameserver-policy']))) {
+                throw new Error('Invalid override object');
+            }
+        } catch {
+            this.managedError = true;
+            this.managedMessage = window.APP_TRANSLATIONS.managementOverridesInvalid;
+            return;
+        }
         const domestic = ['https://dns.alidns.com/dns-query'];
         const foreign = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query']
             .map(url => `${url}#${window.APP_TRANSLATIONS.nodeSelectName}`);
@@ -110,15 +124,19 @@ export const managedSubscriptionLogic = () => ({
             this.selectedRules = [...this.selectedRules, 'Location:CN'];
             this.selectedPredefinedRule = 'custom';
         }
-        this.managedOverrides = JSON.stringify({ dns: {
+        this.managedOverrides = JSON.stringify({ ...existing, dns: {
+            ...existing.dns,
             enable: true, 'respect-rules': false,
             'default-nameserver': ['223.5.5.5', '223.6.6.6'],
             'proxy-server-nameserver': domestic, nameserver: foreign,
             'direct-nameserver': [], fallback: [],
             'nameserver-policy': {
+                ...existing.dns?.['nameserver-policy'],
                 'geosite:cn,private': null, 'geosite:cn': null, 'geosite:geolocation-!cn': null,
                 'rule-set:cn,geolocation-cn': domestic
             }
         } }, null, 2);
+        this.managedError = false;
+        this.managedMessage = '';
     }
 });
