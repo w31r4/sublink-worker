@@ -70,22 +70,26 @@ export function parseClashOverrides(value = {}) {
     if (dns && 'nameserver-policy' in dns) {
         const policy = dns['nameserver-policy'];
         if (!policy || typeof policy !== 'object' || Array.isArray(policy) || !Object.values(policy).every(value =>
-            typeof value === 'string' || (Array.isArray(value) && value.every(server => typeof server === 'string')))) {
+            value === null || typeof value === 'string' || (Array.isArray(value) && value.every(server => typeof server === 'string')))) {
             throw new InvalidPayloadError('dns.nameserver-policy must map domains to DNS servers');
         }
     }
     return overrides;
 }
 
-// Replace arrays, merge maps: retaining an obsolete DNS server can undo a DNS repair.
+// Null removes obsolete policies; retaining them can undo a DNS repair.
 export function mergeClashOverrides(base, overrides) {
     const result = structuredClone(base);
     for (const [key, value] of Object.entries(overrides)) {
         if (BLOCKED_KEYS.has(key)) throw new InvalidPayloadError('Unsupported object key');
+        if (value === null) {
+            delete result[key];
+            continue;
+        }
         const isMap = value && typeof value === 'object' && !Array.isArray(value);
         const currentIsMap = result[key] && typeof result[key] === 'object' && !Array.isArray(result[key]);
-        result[key] = isMap && currentIsMap
-            ? mergeClashOverrides(result[key], value)
+        result[key] = isMap
+            ? mergeClashOverrides(currentIsMap ? result[key] : {}, value)
             : structuredClone(value);
     }
     return result;

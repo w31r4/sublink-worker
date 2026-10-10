@@ -31,11 +31,11 @@ Cloudflare KV 是最终一致存储，修改可能需要 60 秒或更久才能�
 
 ## DNS 覆盖
 
-面板提供国内 / 国际 DNS 模板：国内域名用国内 DNS，境外解析通过对应语言的「节点选择」代理组。模板适用于本项目默认的 Mihomo 配置；自定义基础配置需要保留可用的 geosite 数据库和对应代理组。
+面板提供国内 / 国际 DNS 模板：复用「国内服务」的 `cn`、`geolocation-cn` 域名规则集，命中时使用国内 DNS；其余默认通过对应语言的「节点选择」代理组查询境外 DoH。点击模板会确保选中 `Location:CN`，生成所需的 domain 类型 provider。`cn-ip` 是 IP 规则集，不能用于决定域名如何解析。
 
-OpenAI/ChatGPT、Anthropic/Claude、Gemini/Google AI API 和 Hugging Face 的已知域名有显式境外 DoH 策略。DoH 地址带 `#节点选择`，因此查询的传输也走代理；仅使用一个境外 DNS 地址并不能保证查询经过海外出口。节点服务器地址本身使用国内 bootstrap DNS，避免先解析节点、又依赖该节点才能解析的循环。网页/API 的访问出口继续由流量规则和所选 AI 代理组决定。
+不另建 AI 域名名单：OpenAI、Claude、Gemini 等未命中国内域名集时自然使用海外 DNS。DoH 地址带 `#节点选择`，因此查询的传输也走代理；请在该组选择海外节点。DNS 服务器域名和代理节点地址使用国内 bootstrap DNS，避免循环依赖；这不是把目标 AI 域名交给国内 DNS。网页/API 的访问出口继续由流量规则和所选 AI 代理组决定。客户端自行使用 DoH 或本地覆写时，不能仅凭订阅模板保证没有 DNS 泄漏。
 
-覆盖在节点生成之后应用：对象递归合并，数组替换。这允许彻底替换失效 DNS 上游，同时保留其他 `nameserver-policy` 域名项。节点、代理组、provider 和 rules 仍由原有转换表单管理，不能放进覆盖编辑框。
+覆盖在节点生成之后应用：对象递归合并，数组替换，`null` 删除对应项。模板通过 `null` 清除旧的 geosite 国内/国外 DNS 分支，并清空旧 fallback/direct-nameserver，避免与新逻辑叠加；最终下载配置不含这些 `null` 项。其他 `nameserver-policy` 域名项（包括公司 DNS 例外）继续保留。节点、代理组、provider 和 rules 仍由原有转换表单管理，不能放进覆盖编辑框。参考：[Mihomo DNS 配置](https://wiki.metacubex.one/config/dns/)。
 
 企业 DNS 例外示例（不要给所有设备添加公司专属策略）：
 

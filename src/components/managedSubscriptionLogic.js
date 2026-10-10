@@ -105,16 +105,19 @@ export const managedSubscriptionLogic = () => ({
         const domestic = ['https://dns.alidns.com/dns-query'];
         const foreign = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query']
             .map(url => `${url}#${window.APP_TRANSLATIONS.nodeSelectName}`);
-        const aiDomains = ['openai.com', 'chatgpt.com', 'oaistatic.com', 'oaiusercontent.com',
-            'anthropic.com', 'claude.ai', 'claude.com', 'googleapis.com', 'gemini.google.com',
-            'aistudio.google.com', 'huggingface.co', 'hf.co'];
+        // DNS and traffic routing must share the same domain providers.
+        if (!this.selectedRules.includes('Location:CN')) {
+            this.selectedRules = [...this.selectedRules, 'Location:CN'];
+            this.selectedPredefinedRule = 'custom';
+        }
         this.managedOverrides = JSON.stringify({ dns: {
             enable: true, 'respect-rules': false,
             'default-nameserver': ['223.5.5.5', '223.6.6.6'],
             'proxy-server-nameserver': domestic, nameserver: foreign,
+            'direct-nameserver': [], fallback: [],
             'nameserver-policy': {
-                ...Object.fromEntries(aiDomains.map(domain => [`+.${domain}`, foreign])),
-                'geosite:cn,private': domestic, 'geosite:geolocation-!cn': foreign
+                'geosite:cn,private': null, 'geosite:cn': null, 'geosite:geolocation-!cn': null,
+                'rule-set:cn,geolocation-cn': domestic
             }
         } }, null, 2);
     }

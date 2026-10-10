@@ -201,6 +201,23 @@ describe('managed subscriptions', () => {
         expect(base.dns.nameserver).toEqual(['old']);
     });
 
+    it('removes superseded DNS policies while preserving company-specific resolution', async () => {
+        const { create, request } = setup();
+        const saved = await create({ ...payload(), baseConfig: { type: 'clash', content: {
+            dns: { 'nameserver-policy': { '+.corp.example': ['system'], 'geosite:cn,private': ['old-domestic'] } }
+        } }, clashOverrides: { dns: {
+            nameserver: ['https://dns.google/dns-query#🚀 节点选择'],
+            'nameserver-policy': { 'geosite:cn,private': null, 'geosite:geolocation-!cn': null,
+                'rule-set:cn,geolocation-cn': ['https://dns.alidns.com/dns-query'] }
+        } } });
+        const config = yaml.load(await (await request(`/c/${saved.code}`)).text());
+        expect(config.dns['nameserver-policy']).toEqual({ '+.corp.example': ['system'],
+            'rule-set:cn,geolocation-cn': ['https://dns.alidns.com/dns-query'] });
+        for (const name of ['cn', 'geolocation-cn']) expect(config['rule-providers'][name].behavior).toBe('domain');
+        expect(mergeClashOverrides({}, { dns: { 'nameserver-policy': { obsolete: null } } }))
+            .toEqual({ dns: { 'nameserver-policy': {} } });
+    });
+
     it('wires the management secret through every runtime', () => {
         const env = { SUBLINK_ADMIN_TOKEN: TOKEN };
         for (const factory of [createCloudflareRuntime, createNodeRuntime, createVercelRuntime]) {

@@ -72,15 +72,17 @@ describe('stable subscription form', () => {
         expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('builds domestic DNS policy with the translated outbound for international DNS', () => {
+    it('reuses domestic domain providers and defaults all other DNS queries to the translated proxy', () => {
         const { data } = form(vi.fn());
         data.fillSplitDnsTemplate();
         const { dns } = JSON.parse(data.managedOverrides);
-        expect(dns['nameserver-policy']['geosite:cn,private']).toEqual(['https://dns.alidns.com/dns-query']);
+        expect(dns['nameserver-policy']['rule-set:cn,geolocation-cn']).toEqual(['https://dns.alidns.com/dns-query']);
+        expect(data.selectedRules).toContain('Location:CN');
         expect(dns.nameserver.every(value => value.endsWith('#🚀 节点选择'))).toBe(true);
-        expect(dns['nameserver-policy']['geosite:geolocation-!cn']).toEqual(dns.nameserver);
-        for (const domain of ['+.openai.com', '+.chatgpt.com', '+.anthropic.com', '+.claude.ai', '+.googleapis.com', '+.gemini.google.com', '+.huggingface.co']) {
-            expect(dns['nameserver-policy'][domain]).toEqual(dns.nameserver);
-        }
+        expect(dns['nameserver-policy']['geosite:cn,private']).toBeNull();
+        expect(dns['nameserver-policy']['geosite:geolocation-!cn']).toBeNull();
+        expect(Object.keys(dns['nameserver-policy']).some(key => key.includes('openai'))).toBe(false);
+        expect(dns['direct-nameserver']).toEqual([]);
+        expect(dns.fallback).toEqual([]);
     });
 });
