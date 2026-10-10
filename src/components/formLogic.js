@@ -70,6 +70,7 @@ export const formLogicFn = (t) => {
         };
 
         return {
+            ...(window.managedSubscriptionData?.() || {}),
             input: '',
             showAdvanced: false,
             // Accordion states for each section (二级手风琴状态)
@@ -362,36 +363,39 @@ export const formLogicFn = (t) => {
                 window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
             },
 
+            serializeBaseConfigForSubscription() {
+                return this.configType === 'surge'
+                    ? parseSurgeConfigInput(this.configEditor).configObject : this.configEditor;
+            },
+
+            buildSubscriptionParams() {
+                const customRulesInput = document.querySelector('input[name="customRules"]');
+                const customRules = customRulesInput && customRulesInput.value ? JSON.parse(customRulesInput.value) : [];
+                const params = new URLSearchParams();
+                params.set('lang', window.APP_LANG || 'zh-CN');
+                params.append('config', this.input);
+                params.append('ua', this.customUA);
+                params.append('selectedRules', JSON.stringify(this.selectedRules));
+                params.append('customRules', JSON.stringify(customRules));
+
+                if (this.groupByCountry) params.append('group_by_country', 'true');
+                if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
+                if (this.enableClashUI) params.append('enable_clash_ui', 'true');
+                if (this.externalController) params.append('external_controller', this.externalController);
+                if (this.externalUiDownloadUrl) params.append('external_ui_download_url', this.externalUiDownloadUrl);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const configId = this.currentConfigId || urlParams.get('configId');
+                if (configId) params.append('configId', configId);
+                return params;
+            },
+
             async submitForm() {
                 this.loading = true;
-                this.shortenedLinks = null; // Reset shortened links when generating new links
+                this.shortenedLinks = null;
                 try {
-                    // Get custom rules from the child component via the hidden input
-                    const customRulesInput = document.querySelector('input[name="customRules"]');
-                    const customRules = customRulesInput && customRulesInput.value ? JSON.parse(customRulesInput.value) : [];
-
-                    // Construct URLs
                     const origin = window.location.origin;
-                    const params = new URLSearchParams();
-                    params.append('config', this.input);
-                    params.append('ua', this.customUA);
-                    params.append('selectedRules', JSON.stringify(this.selectedRules));
-                    params.append('customRules', JSON.stringify(customRules));
-
-                    if (this.groupByCountry) params.append('group_by_country', 'true');
-                    if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
-                    if (this.enableClashUI) params.append('enable_clash_ui', 'true');
-                    if (this.externalController) params.append('external_controller', this.externalController);
-                    if (this.externalUiDownloadUrl) params.append('external_ui_download_url', this.externalUiDownloadUrl);
-
-                    // Add configId if present in URL
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const configId = this.currentConfigId || urlParams.get('configId');
-                    if (configId) {
-                        params.append('configId', configId);
-                    }
-
-                    const queryString = params.toString();
+                    const queryString = this.buildSubscriptionParams().toString();
 
                     this.generatedLinks = {
                         xray: origin + '/xray?' + queryString,
@@ -447,7 +451,8 @@ export const formLogicFn = (t) => {
                                 apiUrl += `&shortCode=${encodeURIComponent(shortCode)}`;
                             }
 
-                            const response = await fetch(apiUrl);
+                            const response = await fetch(apiUrl, { headers: this.managedToken
+                                ? { Authorization: `Bearer ${this.managedToken.trim()}` } : {} });
                             if (!response.ok) {
                                 throw new Error(`Failed to shorten ${type} link`);
                             }
@@ -582,6 +587,13 @@ export const formLogicFn = (t) => {
             // Populate form fields from parsed URL
             populateFormFromUrl(url) {
                 const params = new URLSearchParams(url.search);
+                this.selectedRules = [];
+                this.externalController = '';
+                this.externalUiDownloadUrl = '';
+                this.customUA = '';
+                this.currentConfigId = '';
+                this.updateConfigIdInUrl(null);
+                window.dispatchEvent(new CustomEvent('restore-custom-rules', { detail: { rules: [] } }));
 
                 // Extract config (the original subscription URLs)
                 const config = params.get('config');
@@ -599,7 +611,10 @@ export const formLogicFn = (t) => {
                             this.selectedPredefinedRule = 'custom';
                         }
                     } catch (e) {
-                        console.warn('Failed to parse selectedRules:', e);
+                        if (window.PREDEFINED_RULE_SETS?.[selectedRules]) {
+                            this.selectedRules = window.PREDEFINED_RULE_SETS[selectedRules];
+                            this.selectedPredefinedRule = selectedRules;
+                        }
                     }
                 }
 

@@ -169,6 +169,7 @@ dist
 # wrangler project
 
 .dev.vars
+wrangler.production.toml
 .wrangler/
 
 .editorconfig

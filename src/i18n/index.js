@@ -4,6 +4,25 @@ import { checkStartsWith } from "../utils.js";
 // 定义语言包
 export const translations = {
   'zh-CN': {
+    managementTitle: '固定订阅管理',
+    managementDescription: '同一链接持续复用。载入现有短链，编辑下方输入源和规则，保存后各设备刷新订阅即可获取更新。',
+    managementToken: '管理密钥（SUBLINK_ADMIN_TOKEN，仅保留在当前页面内存中）',
+    managementCode: '现有短链或短码',
+    managementCodePlaceholder: '粘贴本站短链；新建时留空',
+    managementLoad: '载入现有订阅',
+    managementNew: '另存为新订阅',
+    managementFormHint: '输入源、规则和基础配置使用下方转换表单。Clash 覆盖在生成后应用；对象合并，数组替换。',
+    managementOverrides: 'Clash 覆盖配置（JSON / YAML，例如 DNS、嗅探；路由规则请在下方编辑）',
+    managementDnsTemplate: '填入国内 / 国际 DNS 模板（会替换此编辑框）',
+    managementInterval: '建议客户端更新间隔（小时）',
+    managementSave: '保存固定订阅',
+    managementTokenRequired: '请填写部署时设置的管理密钥',
+    managementSameOrigin: '只能管理本站的短链',
+    managementCodeRequired: '请填写现有短链或短码',
+    managementLoadFirst: '请先载入该短链，再保存修改；新建订阅请清空短码',
+    managementLegacyLoaded: '已载入旧短链。保存后将迁移为固定订阅，原地址继续有效。',
+    managementLoaded: '已载入订阅，可编辑后保存。',
+    managementSaved: '已保存，链接地址保持不变。KV 传播可能需要 60 秒或更久，请在客户端刷新订阅。',
     enableClashUI: '启用 Clash API',
     enableClashUITip: '在 SingBox 配置中启用 Clash API (支持 Dashboard 面板)，默认端口 9090',
     externalController: '外部控制端口',
@@ -167,6 +186,25 @@ export const translations = {
     later: '稍后'
   },
   'en-US': {
+    managementTitle: 'Stable subscriptions',
+    managementDescription: 'Keep the same URL. Load a short link, edit the source and rules below, then save. Clients receive changes when they refresh.',
+    managementToken: 'Management token (SUBLINK_ADMIN_TOKEN; held in page memory only)',
+    managementCode: 'Existing short URL or code',
+    managementCodePlaceholder: 'Paste a link from this site; leave empty to create',
+    managementLoad: 'Load subscription',
+    managementNew: 'Save as a new subscription',
+    managementFormHint: 'Use the converter form below for sources, rules and base config. Clash overrides apply last: maps merge and arrays replace.',
+    managementOverrides: 'Clash overrides (JSON / YAML, e.g. DNS or sniffing; edit routing rules below)',
+    managementDnsTemplate: 'Insert domestic / international DNS template (replaces this editor)',
+    managementInterval: 'Suggested client refresh interval (hours)',
+    managementSave: 'Save stable subscription',
+    managementTokenRequired: 'Enter the management token configured on the deployment',
+    managementSameOrigin: 'Only links from this site can be managed',
+    managementCodeRequired: 'Enter an existing short URL or code',
+    managementLoadFirst: 'Load this link before saving, or clear the code to create a new subscription',
+    managementLegacyLoaded: 'Legacy link loaded. Saving migrates it to a stable subscription at the same URL.',
+    managementLoaded: 'Subscription loaded. Edit and save your changes.',
+    managementSaved: 'Saved; subscription URLs are unchanged. KV propagation can take 60 seconds or more. Refresh your client subscription.',
     enableClashUI: 'Enable Clash API',
     enableClashUITip: 'Enable Clash API in SingBox config (Support Dashboard), default port 9090',
     externalController: 'External Controller',
@@ -666,6 +704,7 @@ export function createTranslator(lang) {
     for (const k of keys) {
       value = value?.[k];
       if (value === undefined) {
+        if (key.startsWith('management')) return translations['en-US'][key] || key;
         if (checkStartsWith(key, 'outboundNames.')) {
           return key.split('.')[1];
         }

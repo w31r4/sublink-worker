@@ -5,6 +5,8 @@ import { CustomRules } from './CustomRules.jsx';
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
 import { formLogicFn } from './formLogic.js';
+import { managedSubscriptionLogic } from './managedSubscriptionLogic.js';
+import { SubscriptionManager } from './SubscriptionManager.jsx';
 
 const LINK_FIELDS = [
   { key: 'xray', labelKey: 'xrayLink' },
@@ -17,6 +19,10 @@ export const Form = (props) => {
   const { t, lang } = props;
 
   const translations = {
+    ...Object.fromEntries(['managementTokenRequired', 'managementSameOrigin', 'managementCodeRequired',
+      'managementLoadFirst', 'managementLegacyLoaded', 'managementLoaded', 'managementSaved',
+      'missingInput', 'invalidShortUrl'].map(key => [key, t(key)])),
+    nodeSelectName: t('outboundNames.Node Select'),
     processing: t('processing'),
     convert: t('convert'),
     saveConfigSuccess: t('saveConfigSuccess'),
@@ -42,11 +48,13 @@ export const Form = (props) => {
     window.PREDEFINED_RULE_SETS = ${JSON.stringify(PREDEFINED_RULE_SETS)};
     window.APP_LANG = ${JSON.stringify(lang || 'zh-CN')};
     if (typeof __name === 'undefined') { var __name = function(fn) { return fn; }; }
+    window.managedSubscriptionData = ${managedSubscriptionLogic.toString()};
     (${formLogicFn.toString()})();
   `;
 
   return (
     <div x-data="formData()" x-init="init()" class="max-w-4xl mx-auto">
+      <SubscriptionManager t={t} />
       <form {...{'x-on:submit.prevent': 'submitForm'}} class="space-y-8">
 
       {/* Input Section */}

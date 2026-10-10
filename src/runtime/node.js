@@ -10,6 +10,7 @@ export function createNodeRuntime(env = process.env) {
         assetFetcher: createFileAssetFetcher(env.STATIC_DIR || 'public'),
         logger: console,
         config: {
+            adminToken: env.SUBLINK_ADMIN_TOKEN || null,
             configTtlSeconds: parseNumber(env.CONFIG_TTL_SECONDS) ?? undefined,
             shortLinkTtlSeconds: parseNumber(env.SHORT_LINK_TTL_SECONDS) || null
         }

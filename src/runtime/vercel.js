@@ -10,6 +10,7 @@ export function createVercelRuntime(env = process.env) {
         assetFetcher: createFileAssetFetcher('public'),
         logger: console,
         config: {
+            adminToken: env.SUBLINK_ADMIN_TOKEN || null,
             configTtlSeconds: undefined,
             shortLinkTtlSeconds: null
         }

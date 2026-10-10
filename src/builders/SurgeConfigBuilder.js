@@ -11,12 +11,14 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         this.selectedRules = selectedRules;
         this.customRules = customRules;
         this.subscriptionUrl = null;
+        this.subscriptionInterval = 43200;
         this.countryGroupNames = [];
         this.manualGroupName = null;
     }
 
-    setSubscriptionUrl(url) {
+    setSubscriptionUrl(url, interval = 43200) {
         this.subscriptionUrl = url;
+        this.subscriptionInterval = interval;
         return this;
     }
 
@@ -377,7 +379,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         let finalConfig = [];
 
         if (this.subscriptionUrl) {
-            finalConfig.push(`#!MANAGED-CONFIG ${this.subscriptionUrl} interval=43200 strict=false`);
+            finalConfig.push(`#!MANAGED-CONFIG ${this.subscriptionUrl} interval=${this.subscriptionInterval} strict=false`);
             finalConfig.push('');  // 添加一个空行
         }
 

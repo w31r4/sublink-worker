@@ -34,6 +34,10 @@
   </p>
 </div>
 
+### Fork extension: stable, editable subscriptions
+
+Keep subscription URLs unchanged while updating sources, rules and Clash DNS overrides. Existing short links can be migrated in place through the authenticated management UI. See [setup, API and migration instructions](docs/stable-subscriptions.md).
+
 ## 🚀 Quick Start
 
 ### One-Click Deployment

@@ -1,6 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { Layout } from '../components/Layout.jsx';
 import { Navbar } from '../components/Navbar.jsx';
 import { Form } from '../components/Form.jsx';
@@ -14,11 +15,14 @@ import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
 import { APP_NAME, APP_SUBTITLE } from '../constants.js';
 import { ShortLinkService } from '../services/shortLinkService.js';
 import { ConfigStorageService } from '../services/configStorageService.js';
+import { loadManagedSubscription, saveManagedSubscription, mergeClashOverrides } from '../services/managedSubscriptionService.js';
+import { isSubscriptionAdmin, requireSubscriptionAdmin } from '../services/adminAuth.js';
 import { ServiceError, MissingDependencyError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
 
 const DEFAULT_USER_AGENT = 'curl/7.74.0';
+const MANAGED_SUBSCRIPTION = Symbol('managedSubscription');
 
 export function createApp(bindings = {}) {
     const runtime = normalizeRuntime(bindings);
@@ -91,6 +95,8 @@ export function createApp(bindings = {}) {
             const singboxConfigVersion = resolveSingboxConfigVersion(requestedSingboxVersion, requestUserAgent);
 
             let baseConfig = singboxConfigVersion === '1.11' ? SING_BOX_CONFIG_V1_11 : SING_BOX_CONFIG;
+            const managed = c.env?.[MANAGED_SUBSCRIPTION];
+            if (managed?.baseConfig?.type === 'singbox') baseConfig = managed.baseConfig.content;
             if (configId?.startsWith('singbox_')) {
                 const storage = requireConfigStorage(services.configStorage);
                 const storedConfig = await storage.getConfigById(configId);
@@ -143,6 +149,8 @@ export function createApp(bindings = {}) {
             const lang = c.get('lang');
 
             let baseConfig;
+            const managed = c.env?.[MANAGED_SUBSCRIPTION];
+            if (managed?.baseConfig?.type === 'clash') baseConfig = managed.baseConfig.content;
             if (configId?.startsWith('clash_')) {
                 const storage = requireConfigStorage(services.configStorage);
                 baseConfig = await storage.getConfigById(configId);
@@ -162,6 +170,9 @@ export function createApp(bindings = {}) {
                 includeAutoSelect
             );
             await builder.build();
+            if (managed?.clashOverrides) {
+                builder.config = mergeClashOverrides(builder.config, managed.clashOverrides);
+            }
             const userinfo = builder.getSubscriptionUserinfo();
             const headers = { 'Content-Type': 'text/yaml; charset=utf-8' };
             if (userinfo) {
@@ -189,6 +200,8 @@ export function createApp(bindings = {}) {
             const lang = c.get('lang');
 
             let baseConfig;
+            const managed = c.env?.[MANAGED_SUBSCRIPTION];
+            if (managed?.baseConfig?.type === 'surge') baseConfig = managed.baseConfig.content;
             if (configId?.startsWith('surge_')) {
                 const storage = requireConfigStorage(services.configStorage);
                 baseConfig = await storage.getConfigById(configId);
@@ -204,7 +217,8 @@ export function createApp(bindings = {}) {
                 groupByCountry,
                 includeAutoSelect
             );
-            builder.setSubscriptionUrl(c.req.url);
+            builder.setSubscriptionUrl(managed?.subscriptionUrl || c.req.url,
+                managed ? managed.updateIntervalHours * 3600 : undefined);
             await builder.build();
 
             const userinfo = builder.getSubscriptionUserinfo();
@@ -312,6 +326,7 @@ export function createApp(bindings = {}) {
 
     app.get('/shorten-v2', async (c) => {
         try {
+            c.header('Cache-Control', 'no-store');
             const url = c.req.query('url');
             if (!url) {
                 return c.text('Missing URL parameter', 400);
@@ -325,7 +340,8 @@ export function createApp(bindings = {}) {
             const queryString = parsedUrl.search;
 
             const shortLinks = requireShortLinkService(services.shortLinks);
-            const code = await shortLinks.createShortLink(queryString, c.req.query('shortCode'));
+            const allowOverwrite = !runtime.config.adminToken || await isSubscriptionAdmin(c.req, runtime.config.adminToken);
+            const code = await shortLinks.createShortLink(queryString, c.req.query('shortCode'), { allowOverwrite });
             return c.text(code);
         } catch (error) {
             return handleError(c, error, runtime.logger);
@@ -334,13 +350,29 @@ export function createApp(bindings = {}) {
 
     const redirectHandler = (prefix) => async (c) => {
         try {
+            c.header('Cache-Control', 'no-store');
             const code = c.req.param('code');
             const shortLinks = requireShortLinkService(services.shortLinks);
-            const originalParam = await shortLinks.resolveShortCode(code);
-            if (!originalParam) return c.text('Short URL not found', 404);
+            const record = await shortLinks.getRecord(code);
+            if (!record) return c.text('Short URL not found', 404);
 
             const url = new URL(c.req.url);
-            return c.redirect(`${url.origin}/${prefix}${originalParam}`);
+            if (record.legacy) return c.redirect(`${url.origin}/${prefix}${record.query}`);
+
+            // Render in-process so clients keep the stable URL and never pin a redirect target.
+            const headers = new Headers();
+            for (const name of ['User-Agent', 'Accept-Language']) {
+                const value = getRequestHeader(c.req, name);
+                if (value) headers.set(name, value);
+            }
+            const response = await app.request(`${url.origin}/${prefix}${record.query}`, { headers }, {
+                [MANAGED_SUBSCRIPTION]: { ...record, subscriptionUrl: `${url.origin}/${url.pathname.split('/')[1]}/${code}` }
+            });
+            const responseHeaders = new Headers(response.headers);
+            responseHeaders.set('Cache-Control', 'no-store');
+            responseHeaders.set('profile-update-interval', String(record.updateIntervalHours));
+            responseHeaders.set('X-Subscription-Revision', record.revision);
+            return new Response(response.body, { status: response.status, headers: responseHeaders });
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
@@ -350,6 +382,47 @@ export function createApp(bindings = {}) {
     app.get('/b/:code', redirectHandler('singbox'));
     app.get('/c/:code', redirectHandler('clash'));
     app.get('/x/:code', redirectHandler('xray'));
+
+    app.use('/api/subscriptions/*', async (c, next) => {
+        c.header('Cache-Control', 'no-store');
+        try {
+            await requireSubscriptionAdmin(c.req, runtime.config.adminToken);
+            requireShortLinkService(services.shortLinks);
+            await next();
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+    app.use('/api/subscriptions/*', bodyLimit({ maxSize: 512 * 1024 }));
+
+    app.get('/api/subscriptions/:code', async (c) => {
+        try {
+            const code = c.req.param('code');
+            const record = await loadManagedSubscription(runtime.kv, code, services.configStorage);
+            c.header('ETag', `"${record.revision}"`);
+            return c.json({ code, ...record });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    const saveSubscription = (create) => async (c) => {
+        try {
+            const payload = await c.req.json();
+            const code = create ? crypto.randomUUID().replaceAll('-', '') : c.req.param('code');
+            const revisionHeader = c.req.header('If-Match');
+            if (!create && !revisionHeader) return c.text('Load the subscription first and provide If-Match', 428);
+            const revision = create ? null : revisionHeader.replace(/^"|"$/g, '');
+            const record = await saveManagedSubscription(runtime.kv, code, payload, revision, services.configStorage);
+            c.header('ETag', `"${record.revision}"`);
+            return c.json({ code, ...record }, create ? 201 : 200);
+        } catch (error) {
+            if (error instanceof SyntaxError) return c.text('Invalid JSON body', 400);
+            return handleError(c, error, runtime.logger);
+        }
+    };
+    app.post('/api/subscriptions', saveSubscription(true));
+    app.put('/api/subscriptions/:code', saveSubscription(false));
 
     app.post('/config', async (c) => {
         try {
@@ -367,6 +440,7 @@ export function createApp(bindings = {}) {
 
     app.get('/resolve', async (c) => {
         try {
+            c.header('Cache-Control', 'no-store');
             const shortUrl = c.req.query('url');
             const t = c.get('t');
             if (!shortUrl) return c.text(t('missingUrl'), 400);
@@ -385,11 +459,17 @@ export function createApp(bindings = {}) {
             if (!['b', 'c', 'x', 's'].includes(prefix)) return c.text(t('invalidShortUrl'), 400);
 
             const shortLinks = requireShortLinkService(services.shortLinks);
-            const originalParam = await shortLinks.resolveShortCode(shortCode);
-            if (!originalParam) return c.text(t('shortUrlNotFound'), 404);
+            const record = await shortLinks.getRecord(shortCode);
+            if (!record) return c.text(t('shortUrlNotFound'), 404);
+
+            // Managed records can contain private edit state not present in their download URL.
+            if (!record.legacy) {
+                await requireSubscriptionAdmin(c.req, runtime.config.adminToken);
+                return c.json({ managed: true, code: shortCode });
+            }
 
             const mapping = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge' };
-            const originalUrl = `${urlObj.origin}/${mapping[prefix]}${originalParam}`;
+            const originalUrl = `${urlObj.origin}/${mapping[prefix]}${record.query}`;
             return c.json({ originalUrl });
         } catch (error) {
             return handleError(c, error, runtime.logger);

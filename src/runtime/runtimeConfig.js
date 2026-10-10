@@ -11,6 +11,7 @@
 
 /**
  * @typedef {Object} RuntimeConfig
+ * @property {string | null} [adminToken]
  * @property {number} [configTtlSeconds]
  * @property {number} [shortLinkTtlSeconds]
  */
@@ -39,6 +40,7 @@ export function normalizeRuntime(runtime = {}) {
         assetFetcher: runtime.assetFetcher ?? null,
         logger: runtime.logger ?? console,
         config: {
+            adminToken: runtime.config?.adminToken || null,
             configTtlSeconds: runtime.config?.configTtlSeconds ?? DEFAULTS.configTtlSeconds,
             shortLinkTtlSeconds: runtime.config?.shortLinkTtlSeconds ?? null
         }
